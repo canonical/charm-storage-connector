@@ -12,10 +12,10 @@ subordinate: true
 series:
     - bionic
     - focal
-# -- example relations, delete if unneeded
-#requires:
-#    db:
-#        interface: mysql
+requires:
+   host:
+       interface: juju-info
+       scope: container
 #provides:
 #    website:
 #        interface: http
