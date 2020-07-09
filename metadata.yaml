@@ -7,10 +7,11 @@ description: |
     high level information about how the charm provides the product,
     on which platform, etc.
 tags:
-    - misc
+    - iscsi
+subordinate: true
 series:
     - bionic
-    - xenial
+    - focal
 # -- example relations, delete if unneeded
 #requires:
 #    db:

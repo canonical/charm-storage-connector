@@ -6,6 +6,9 @@
 """Operator Charm main library."""
 # Load modules from lib directory
 import logging
+import os
+from pathlib import Path
+import subprocess
 
 import setuppath  # noqa:F401
 from ops.charm import CharmBase
@@ -13,11 +16,30 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus
 
+import charmhelpers.core.host as ch_host
+import charmhelpers.core.templating as ch_templating
+import adapters
+logger = logging.getLogger(__name__)
+
 
 class CharmIscsiConnectorCharm(CharmBase):
     """Class reprisenting this Operator charm."""
 
     state = StoredState()
+    PACKAGES = ['multipath-tools']
+
+    ISCSI_CONF_PATH = Path('/etc/iscsi')
+    ISCSI_CONF = ISCSI_CONF_PATH / 'iscsid.conf'
+    ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
+    MULTIPATH_CONF_PATH = Path('/etc')
+    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
+
+    ISCSI_SERVICES = ['iscsid', 'open-iscsi', 'multipathd']
+
+    RESTART_MAP = {
+        str(ISCSI_CONF): ISCSI_SERVICES,
+        str(MULTIPATH_CONF): ISCSI_SERVICES
+    }
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -25,7 +47,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         # -- standard hook observation
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.start, self.on_start)
-        self.framework.observe(self.on.config_changed, self.on_config_changed)
+        self.framework.observe(self.on.config_changed, self.render_config)
         # -- initialize states --
         self.state.set_default(installed=False)
         self.state.set_default(configured=False)
@@ -39,21 +61,47 @@ class CharmIscsiConnectorCharm(CharmBase):
         logging.info("Install of software complete")
         self.state.installed = True
 
-    def on_config_changed(self, event):
-        """Handle config changed."""
+    # def on_config_changed(self, event):
+    #     """Handle config changed."""
 
-        if not self.state.installed:
-            logging.warning("Config changed called before install complete, deferring event: {}.".format(event.handle))
-            self._defer_once(event)
+    #     if not self.state.installed:
+    #         logging.warning("Config changed called before install complete, deferring event: {}.".format(event.handle))
+    #         self._defer_once(event)
 
-            return
+    #         return
 
-        if self.state.started:
-            # Stop if necessary for reconfig
-            logging.info("Stopping for configuration, event handle: {}".format(event.handle))
-        # Configure the software
-        logging.info("Configuring")
-        self.state.configured = True
+    #     if self.state.started:
+    #         # Stop if necessary for reconfig
+    #         logging.info("Stopping for configuration, event handle: {}".format(event.handle))
+    #     # Configure the software
+    #     logging.info("Configuring")
+    #     self.state.configured = True
+
+    def render_config(self, event):
+        self.ISCSI_CONF_PATH.mkdir(
+            exist_ok=True,
+            mode=0o750)
+
+        def daemon_reload_and_restart(service_name):
+            subprocess.check_call(['systemctl', 'daemon-reload'])
+            subprocess.check_call(['systemctl', 'restart', service_name])
+
+        rfuncs = {
+            'rbd-target-api': daemon_reload_and_restart} #does rdb-target-api changes anything ?
+        
+        @ch_host.restart_on_change(self.RESTART_MAP, restart_functions=rfuncs)
+        def _render_configs():
+            for config_file in self.RESTART_MAP.keys():
+                ch_templating.render(
+                    os.path.basename(config_file),
+                    config_file,
+                    #self.adapters
+                    )
+        logging.info("Rendering config")
+        _render_configs()
+        logging.info("Setting started state")
+        self.state.is_started = True
+        self.update_status()
 
     def on_start(self, event):
         """Handle start state."""

@@ -1,13 +1,21 @@
 options:
-    example_string_config:
+    target:
         type: string
-        description: 'An example string configuration item'
-        default: ''
-    example_int_config:
-        type: int
-        description: 'An example integer configuration item'
-        default: 9001
-    example_boolean_config:
-        type: boolean
-        description: 'An example boolean configuration item'
-        default: false
+        description: 'ISCSI target IP'
+        default:
+    port:
+        type: string
+        description: 'ISCSI target port'
+        default:
+    iscsid-conf:
+        type: string
+        default:
+        description: |
+        To input a complete configuration in /etc/iscsi/iscsid.conf,
+        use a json formatted string here.
+    multipath-conf:
+        type: string
+        default:
+        description: |
+        To input a complete configuration in /etc/multipath.conf,
+        use a json formatted string here.
