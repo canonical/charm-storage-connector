@@ -1,6 +1,3 @@
 [submodule "mod/operator"]
 	path = mod/operator
 	url = https://github.com/canonical/operator.git
-[submodule "jinja"]
-	path = jinja
-	url = https://github.com/pallets/jinja

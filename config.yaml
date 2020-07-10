@@ -2,7 +2,7 @@ options:
     target:
         type: string
         description: 'ISCSI target IP'
-        default: test
+        default: pouet
     port:
         type: string
         description: 'ISCSI target port'
@@ -13,9 +13,20 @@ options:
         description: |
             To input a complete configuration in /etc/iscsi/iscsid.conf,
             use a json formatted string here.
+    initiator-dictionary:
+        type: string
+        default: '{"juju-d35431-is-0.project.serverstack": "initiator", "hostname2": "initiator2"}'
+        description: |
+            Dictionary of hostnames (fqdn) and initiator names, surrounded by 
+            single quotes. The charm compares the machine hostname to 
+            the list, and provide the correct initiator associated to 
+            it. If not defined, the initiator name will be provided 
+            randomly. Format : 
+            '{"hostname1": "initiator", "hostname2": "initiator2"}'
     multipath-conf:
         type: string
         default:
         description: |
             To input a complete configuration in /etc/multipath.conf,
             use a json formatted string here.
+    

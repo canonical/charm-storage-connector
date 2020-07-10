@@ -16,6 +16,3 @@ requires:
    host:
        interface: juju-info
        scope: container
-#provides:
-#    website:
-#        interface: http

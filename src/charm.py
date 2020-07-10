@@ -3,14 +3,17 @@
 # vim:fenc=utf-8
 # Copyright © 2020 Camille Rodriguez camille.rodriguez@canonical.com
 
-"""Operator Charm main library."""
-# Load modules from lib directory
+import apt
+from jinja2 import Environment, FileSystemLoader
+import json
 import logging
 import os
 from pathlib import Path
+import socket
 import subprocess
-from jinja2 import Environment, FileSystemLoader
 
+
+# Load modules from lib directory
 import setuppath  # noqa:F401
 from ops.charm import CharmBase
 from ops.framework import StoredState
@@ -56,7 +59,17 @@ class CharmIscsiConnectorCharm(CharmBase):
     def on_install(self, event):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
-        # Perform install tasks
+
+        # install packages
+        cache = apt.cache.Cache()
+        cache.update()
+        cache.open()
+        for package in self.PACKAGES:
+            pkg = cache[package]
+            if not pkg.is_installed:
+                pkg.mark_install()
+                cache.commit()
+
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
         self.state.installed = True
@@ -88,10 +101,46 @@ class CharmIscsiConnectorCharm(CharmBase):
             'target': charm_config.get('target', False),
         }
         tenv = Environment(loader=FileSystemLoader('templates'))
-        template = tenv.get_template('iscsid.conf.j2')
-        rendered_content = template.render(ctxt)
-        self.ISCSI_CONF.write_text(rendered_content)
-        logging.info('Rendering config')
+        
+        def _iscsi_initiator():
+            hostname = socket.getfqdn()
+            initiators = charm_config.get('initiator-dictionary')
+            if initiators:
+                # search for hostname and create context
+                initiators_dict = json.loads(initiators)
+                initiator_name = initiators_dict[hostname]
+            else:
+                # generate random name
+                logging.warning('The hostname was not found in the initiator' +
+                ' dictionary! A random name will be generated for ' +
+                '{}'.format(hostname))
+                initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
+            # should I raise an error if initiator_name isnt defined by neither?
+
+            ctxt = {'initiator_name': initiator_name}
+            template = tenv.get_template('initiatorname.iscsi.j2')
+            rendered_content = template.render(ctxt)
+            self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
+            logging.info('Rendering initiatorname.iscsi')
+
+        def _iscsid_configuration():
+            template = tenv.get_template('iscsid.conf.j2')
+            rendered_content = template.render(ctxt)
+            self.ISCSI_CONF.write_text(rendered_content)
+            self.ISCSI_CONF.chmod(0o600)
+            logging.info('Rendering iscsid.conf')
+
+        def _multipath_configuration():
+            template = tenv.get_template('multipath.conf.j2')
+            rendered_content = template.render(ctxt)
+            self.MULTIPATH_CONF.write_text(rendered_content)
+            self.MULTIPATH_CONF.chmod(0o644)
+            logging.info('Rendering multipath.conf')
+
+
+        _iscsi_initiator()
+        _iscsid_configuration()
+        _multipath_configuration()
 
         if self.state.started:
             logging.info('Restarting services')
@@ -99,7 +148,8 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         logging.info("Setting started state")
         self.state.started = True
-        self.unit.status = ActiveStatus()
+        # self.unit.status = ActiveStatus()
+        self.state.configured = True
 
     def on_start(self, event):
         """Handle start state."""
