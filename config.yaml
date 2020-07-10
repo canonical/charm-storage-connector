@@ -2,7 +2,7 @@ options:
     target:
         type: string
         description: 'ISCSI target IP'
-        default:
+        default: test
     port:
         type: string
         description: 'ISCSI target port'
@@ -11,11 +11,11 @@ options:
         type: string
         default:
         description: |
-        To input a complete configuration in /etc/iscsi/iscsid.conf,
-        use a json formatted string here.
+            To input a complete configuration in /etc/iscsi/iscsid.conf,
+            use a json formatted string here.
     multipath-conf:
         type: string
         default:
         description: |
-        To input a complete configuration in /etc/multipath.conf,
-        use a json formatted string here.
+            To input a complete configuration in /etc/multipath.conf,
+            use a json formatted string here.

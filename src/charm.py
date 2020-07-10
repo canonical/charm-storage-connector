@@ -9,16 +9,15 @@ import logging
 import os
 from pathlib import Path
 import subprocess
+from jinja2 import Environment, FileSystemLoader
 
 import setuppath  # noqa:F401
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, MaintenanceStatus
+from adapters.framework import FrameworkAdapter
 
-import charmhelpers.core.host as ch_host
-import charmhelpers.core.templating as ch_templating
-import adapters
 logger = logging.getLogger(__name__)
 
 
@@ -44,6 +43,7 @@ class CharmIscsiConnectorCharm(CharmBase):
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
         super().__init__(*args)
+        self.fw_adapter = FrameworkAdapter(self.framework)
         # -- standard hook observation
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.start, self.on_start)
@@ -77,31 +77,29 @@ class CharmIscsiConnectorCharm(CharmBase):
     #     logging.info("Configuring")
     #     self.state.configured = True
 
+
     def render_config(self, event):
         self.ISCSI_CONF_PATH.mkdir(
             exist_ok=True,
             mode=0o750)
-
-        def daemon_reload_and_restart(service_name):
-            subprocess.check_call(['systemctl', 'daemon-reload'])
-            subprocess.check_call(['systemctl', 'restart', service_name])
-
-        rfuncs = {
-            'rbd-target-api': daemon_reload_and_restart} #does rdb-target-api changes anything ?
         
-        @ch_host.restart_on_change(self.RESTART_MAP, restart_functions=rfuncs)
-        def _render_configs():
-            for config_file in self.RESTART_MAP.keys():
-                ch_templating.render(
-                    os.path.basename(config_file),
-                    config_file,
-                    #self.adapters
-                    )
-        logging.info("Rendering config")
-        _render_configs()
+        charm_config = self.fw_adapter.get_config()
+        ctxt = {
+            'target': charm_config.get('target', False),
+        }
+        tenv = Environment(loader=FileSystemLoader('templates'))
+        template = tenv.get_template('iscsid.conf.j2')
+        rendered_content = template.render(ctxt)
+        self.ISCSI_CONF.write_text(rendered_content)
+        logging.info('Rendering config')
+
+        if self.state.started:
+            logging.info('Restarting services')
+            subprocess.check_call(['systemctl', 'restart', self.ISCSI_SERVICES[0]])
+
         logging.info("Setting started state")
-        self.state.is_started = True
-        self.update_status()
+        self.state.started = True
+        self.unit.status = ActiveStatus()
 
     def on_start(self, event):
         """Handle start state."""

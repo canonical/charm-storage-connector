@@ -15,6 +15,9 @@ __pycache__/
 # pycharm
 .idea/
 
+#visual studio code
+.history
+
 # version data
 repo-info
 

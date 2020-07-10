@@ -1,4 +1,4 @@
-name: charm-iscsi-connector
+name: iscsi-connector
 summary: Describe your charm here
 maintainers:
     - Camille Rodriguez <camille.rodriguez@canonical.com>
