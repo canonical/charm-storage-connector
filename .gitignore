@@ -5,9 +5,11 @@ __pycache__/
 
 # Log files
 *.log
+.last*
 
 .tox/
 .coverage
+htmlcov
 
 # vi
 .*.swp
@@ -23,3 +25,11 @@ repo-info
 
 # reports
 report/*
+
+# virtual env
+env
+
+# build folder
+build
+iscsi-connector.charm
+charm.egg-info

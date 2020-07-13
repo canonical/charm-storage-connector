@@ -12,9 +12,6 @@ from pathlib import Path
 import socket
 import subprocess
 
-
-# Load modules from lib directory
-import setuppath  # noqa:F401
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
