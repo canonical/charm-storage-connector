@@ -2,17 +2,24 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Log files
 *.log
+
 .tox/
 .coverage
+
+# vi
 .*.swp
+
+# pycharm
 .idea/
+
+#visual studio code
 .history
+
+# version data
 repo-info
+
+# reports
 report/*
-*.charm
-*.egg-info
-.last-*
-.pytest_cache
-build/
-htmlcov
