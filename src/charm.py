@@ -15,7 +15,7 @@ import subprocess
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus
+from ops.model import ActiveStatus, MaintenanceStatus, ModelError
 from adapters.framework import FrameworkAdapter
 
 logger = logging.getLogger(__name__)
@@ -126,19 +126,40 @@ class CharmIscsiConnectorCharm(CharmBase):
             logging.info('Rendering initiatorname.iscsi')
 
         def _iscsid_configuration():
-            template = tenv.get_template('iscsid.conf.j2')
-            rendered_content = template.render(ctxt)
+            iscsi_resource = None
+            try:
+                iscsi_resource = self.framework.model.resources.fetch('iscsid-conf')
+            except ModelError:
+                # The resource is optional, the charm should not error without it. 
+                pass
+            if iscsi_resource:
+                logging.info('Resource iscsi.conf found, rendering.')
+                rendered_content = iscsi_resource.read_text()
+            else:
+                logging.info('Rendering default iscsid.conf template.')
+                template = tenv.get_template('iscsid.conf.j2')
+                rendered_content = template.render(ctxt)
+
             self.ISCSI_CONF.write_text(rendered_content)
             self.ISCSI_CONF.chmod(0o600)
-            logging.info('Rendering iscsid.conf')
-
+            
         def _multipath_configuration():
-            template = tenv.get_template('multipath.conf.j2')
-            rendered_content = template.render(ctxt)
+            multipath_resource = None
+            try:
+                multipath_resource = self.framework.model.resources.fetch('multipath-conf')
+            except ModelError:
+                # The resource is optional, the charm should not error without it. 
+                pass
+            if multipath_resource:
+                logging.info('Resource multipath.conf found, rendering.')
+                rendered_content = multipath_resource.read_text()
+            else:
+                logging.info('Rendering default multipath.conf template.')
+                template = tenv.get_template('multipath.conf.j2')
+                rendered_content = template.render(ctxt)
+
             self.MULTIPATH_CONF.write_text(rendered_content)
             self.MULTIPATH_CONF.chmod(0o644)
-            logging.info('Rendering multipath.conf')
-
 
         _iscsi_initiator()
         _iscsid_configuration()
@@ -150,7 +171,6 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         logging.info("Setting started state")
         self.state.started = True
-        # self.unit.status = ActiveStatus()
         self.state.configured = True
 
     def on_start(self, event):

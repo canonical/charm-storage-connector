@@ -7,12 +7,6 @@ options:
         type: string
         description: 'ISCSI target port'
         default:
-    iscsid-conf:
-        type: string
-        default:
-        description: |
-            To input a complete configuration in /etc/iscsi/iscsid.conf,
-            use a json formatted string here.
     initiator-dictionary:
         type: string
         default: '{}'
@@ -24,10 +18,4 @@ options:
             randomly. Format : 
             '{"hostname1": "iqn.yyyy-mm.naming-authority:uniquename1", 
               "hostname2": "iqn.yyyy-mm.naming-authority:uniquename2}'
-    multipath-conf:
-        type: string
-        default:
-        description: |
-            To input a complete configuration in /etc/multipath.conf,
-            use a json formatted string here.
     
