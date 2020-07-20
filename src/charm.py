@@ -33,12 +33,8 @@ class CharmIscsiConnectorCharm(CharmBase):
     MULTIPATH_CONF_PATH = Path('/etc')
     MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
 
-    ISCSI_SERVICES = ['iscsid', 'open-iscsi', 'multipathd']
-
-    RESTART_MAP = {
-        str(ISCSI_CONF): ISCSI_SERVICES,
-        str(MULTIPATH_CONF): ISCSI_SERVICES
-    }
+    ISCSI_SERVICES = ['iscsid', 'open-iscsi']
+    MULTIPATH_SERVICE = ['multipathd']
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -71,35 +67,16 @@ class CharmIscsiConnectorCharm(CharmBase):
         logging.info("Install of software complete")
         self.state.installed = True
 
-    # def on_config_changed(self, event):
-    #     """Handle config changed."""
-
-    #     if not self.state.installed:
-    #         logging.warning("Config changed called before install complete, deferring event: {}.".format(event.handle))
-    #         self._defer_once(event)
-
-    #         return
-
-    #     if self.state.started:
-    #         # Stop if necessary for reconfig
-    #         logging.info("Stopping for configuration, event handle: {}".format(event.handle))
-    #     # Configure the software
-    #     logging.info("Configuring")
-    #     self.state.configured = True
-
-
     def render_config(self, event):
         self.ISCSI_CONF_PATH.mkdir(
             exist_ok=True,
             mode=0o750)
         
         charm_config = self.fw_adapter.get_config()
-        ctxt = {
-            'target': charm_config.get('target', False),
-        }
         tenv = Environment(loader=FileSystemLoader('templates'))
         
         def _iscsi_initiator():
+            initiator_name = None
             hostname = socket.getfqdn()
             initiators = charm_config.get('initiator-dictionary')
             if initiators:
@@ -108,12 +85,8 @@ class CharmIscsiConnectorCharm(CharmBase):
                 if hostname in initiators_dict.keys():
                     # TO-DO (maybe): add a regex check to make sure the initiator name provided respects the correct format. 
                     initiator_name = initiators_dict[hostname]
-                else:
-                    logging.warning('The hostname was not found in the initiator' +
-                    ' dictionary! A random name will be generated for ' +
-                    '{}'.format(hostname))
-                    initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
-            else:
+
+            if not initiator_name:
                 logging.warning('The hostname was not found in the initiator' +
                 ' dictionary! A random name will be generated for ' +
                 '{}'.format(hostname))
@@ -161,13 +134,34 @@ class CharmIscsiConnectorCharm(CharmBase):
             self.MULTIPATH_CONF.write_text(rendered_content)
             self.MULTIPATH_CONF.chmod(0o644)
 
+        def _iscsiadm_discovery():
+            target = charm_config.get('target')
+            port = charm_config.get('port')
+            logging.info('Launching iscsiadm discovery against target')
+            subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets', '-p', target + ':' + port])
+
+        def _iscsiadm_login():
+            subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
+
+
         _iscsi_initiator()
         _iscsid_configuration()
         _multipath_configuration()
 
-        logging.info('Restarting services')
+        logging.info('Enabling iscsid')
+        # Enabling the service ensure it start on reboots. 
+        subprocess.check_call(['systemctl', 'enable', self.ISCSI_SERVICES[0]])
+
+        logging.info('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
             subprocess.check_call(['systemctl', 'restart', service])
+        
+        logging.info('Launch iscsiadm discovery and login')
+        _iscsiadm_discovery
+        _iscsiadm_login
+
+        logging.info('Restarting multipathd service')
+        subprocess.check_call(['systemctl', 'restart', self.MULTIPATH_SERVICE])
 
         logging.info("Setting started state")
         self.state.started = True

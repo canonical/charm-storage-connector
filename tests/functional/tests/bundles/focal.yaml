@@ -1,5 +1,5 @@
  
-series: bionic
+series: focal
 machines:
   '0':
     constraints: mem=3072M

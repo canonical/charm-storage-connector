@@ -2,7 +2,7 @@ options:
     target:
         type: string
         description: 'ISCSI target IP'
-        default: pouet
+        default: 
     port:
         type: string
         description: 'ISCSI target port'

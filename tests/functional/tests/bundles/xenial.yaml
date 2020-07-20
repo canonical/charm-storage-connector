@@ -1,7 +1,0 @@
-series: xenial
-
-applications:
-    charm-iscsi-connector:
-        charm: ../../../../
-        num_units: 1
-
