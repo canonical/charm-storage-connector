@@ -15,14 +15,15 @@ options:
             use a json formatted string here.
     initiator-dictionary:
         type: string
-        default: '{"juju-d35431-is-0.project.serverstack": "initiator", "hostname2": "initiator2"}'
+        default: '{}'
         description: |
             Dictionary of hostnames (fqdn) and initiator names, surrounded by 
             single quotes. The charm compares the machine hostname to 
             the list, and provide the correct initiator associated to 
             it. If not defined, the initiator name will be provided 
             randomly. Format : 
-            '{"hostname1": "initiator", "hostname2": "initiator2"}'
+            '{"hostname1": "iqn.yyyy-mm.naming-authority:uniquename1", 
+              "hostname2": "iqn.yyyy-mm.naming-authority:uniquename2}'
     multipath-conf:
         type: string
         default:

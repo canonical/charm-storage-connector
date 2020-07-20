@@ -105,14 +105,19 @@ class CharmIscsiConnectorCharm(CharmBase):
             if initiators:
                 # search for hostname and create context
                 initiators_dict = json.loads(initiators)
-                initiator_name = initiators_dict[hostname]
+                if hostname in initiators_dict.keys():
+                    # TO-DO (maybe): add a regex check to make sure the initiator name provided respects the correct format. 
+                    initiator_name = initiators_dict[hostname]
+                else:
+                    logging.warning('The hostname was not found in the initiator' +
+                    ' dictionary! A random name will be generated for ' +
+                    '{}'.format(hostname))
+                    initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
             else:
-                # generate random name
                 logging.warning('The hostname was not found in the initiator' +
                 ' dictionary! A random name will be generated for ' +
                 '{}'.format(hostname))
                 initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
-            # should I raise an error if initiator_name isnt defined by neither?
 
             ctxt = {'initiator_name': initiator_name}
             template = tenv.get_template('initiatorname.iscsi.j2')
@@ -139,9 +144,9 @@ class CharmIscsiConnectorCharm(CharmBase):
         _iscsid_configuration()
         _multipath_configuration()
 
-        if self.state.started:
-            logging.info('Restarting services')
-            subprocess.check_call(['systemctl', 'restart', self.ISCSI_SERVICES[0]])
+        logging.info('Restarting services')
+        for service in self.ISCSI_SERVICES:
+            subprocess.check_call(['systemctl', 'restart', service])
 
         logging.info("Setting started state")
         self.state.started = True
