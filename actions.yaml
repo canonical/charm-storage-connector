@@ -1,0 +1,4 @@
+restart-iscsi-services:
+  description: "Restart iscsid and open-iscsi services"
+restart-multipathd-service:
+  description: "Restart multipathd service"

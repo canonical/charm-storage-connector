@@ -9,7 +9,6 @@ import os
 import tempfile
 import unittest
 
-import setuppath  # noqa:F401
 import mock
 import ops
 import ops.main

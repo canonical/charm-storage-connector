@@ -20,3 +20,4 @@ Contact
 -------
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
  - Bug Tracker: [here](https://discourse.juju.is/c/charming)
+ 

@@ -1,6 +1,5 @@
 import unittest
 
-import setuppath  # noqa:F401
 from operator_fixtures import OperatorTestCase
 
 
