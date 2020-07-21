@@ -21,13 +21,13 @@ resources:
         type: file
         filename: iscsid.conf
         description: |
-            iSCSI configuration file injected in the unit at 
+            Optional iSCSI configuration file injected in the unit at 
             /etc/iscsi/iscsid.conf. If not provided, the template from
             /templates/iscsid.conf.j2 will be used. 
     multipath-conf:
         type: file
         filename: multipath.conf
         description: |
-            Multipath configuration file injected in the unit at 
+            Optional multipath configuration file injected in the unit at 
             /etc/multipath.conf. If not provided, the template from 
             /templates/multipath.conf.j2 will be used.
