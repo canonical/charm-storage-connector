@@ -11,7 +11,8 @@ machines:
   '6':
 applications:
   iscsi-connector:
-    charm: /home/ubuntu/iscsi-connector.charm
+    # TODO: change location
+    charm: /home/ubuntu/charmcraft/iscsi-connector.charm
   ubuntu:
     charm: cs:ubuntu
     num_units: 1
