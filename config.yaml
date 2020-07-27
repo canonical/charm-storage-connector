@@ -32,6 +32,26 @@ options:
                     fast_io_fail_tmo 10
                     path_grouping_policy "group_by_prio"
                 }
+    iscsi-node-session-auth-authmethod:
+        type: string
+        default:
+        description: Authentication method (CHAP or None). Default is None.
+    iscsi-node-session-auth-username:
+        type: string
+        default:
+        description: CHAP username for initiator authentication by the target
+    iscsi-node-session-auth-password:
+        type: string
+        default:
+        description: CHAP password for initiator authentication by the target
+    iscsi-node-session-auth-username-in:
+        type: string
+        default:
+        description: CHAP username for target authentication by the initiator
+    iscsi-node-session-auth-password-in:
+        type: string
+        default:
+        description: CHAP password for target authentication by the initiator
     iscsi-node-startup:
         type: string
         default: automatic

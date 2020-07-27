@@ -205,7 +205,12 @@ class CharmIscsiConnectorCharm(CharmBase):
         ctxt = {
             'node_startup': charm_config.get('iscsi-node-startup'),
             'node_fastabort': charm_config.get('iscsi-node-session-iscsi-fastabort'),
-            'node_session_scan': charm_config.get('iscsi-node-session-scan')
+            'node_session_scan': charm_config.get('iscsi-node-session-scan'),
+            'auth_authmethod': charm_config.get('iscsi-node-session-auth-authmethod'),
+            'auth_username': charm_config.get('iscsi-node-session-auth-username'),
+            'auth_password': charm_config.get('iscsi-node-session-auth-password'),
+            'auth_username_in': charm_config.get('iscsi-node-session-auth-username-in'),
+            'auth_password_in': charm_config.get('iscsi-node-session-auth-password-in'),
         }
         logging.info('Rendering iscsid.conf template.')
         template = tenv.get_template('iscsid.conf.j2')
