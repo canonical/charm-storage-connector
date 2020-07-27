@@ -29,6 +29,7 @@ To build the charm, one needs to use the charmcraft tool.
 so using this charmcraft version: https://github.com/camille-rodriguez/charmcraft **
 To use my version of charmcraft, launch a virtual environment to build this charm. 
 Here is an example with `fades`:
+
 `fades -r requirements.txt -x python -m charmcraft build --from <CHARM_PATH>`
 
 This generates a file called iscsi-connector.charm
@@ -42,11 +43,14 @@ To deploy it on a ubuntu unit, deploy cs:ubuntu first.
 To edit the config of the target or the port:
 `juju config iscsi-connector target=<TARGET_IP> port=<PORT>`
 
+<<<<<<< HEAD
 To input a custom iscsid.conf or multipathd.conf configuration, edit the bundle or
 provide the resources post-deployment to juju:
 `juju attach-resource iscsi-connector iscsid-conf=<file_path>`
 `juju attach-resource iscsi-connector multipathd-conf=<file_path>`
 
+=======
+>>>>>>> a4aa887b432884211626dad201ca49cd05919dec
 To restart services manually, two actions exist:
 `juju run-action --unit ubuntu/0 restart-iscsi-services`
 `juju run-action --unit ubuntu/0 restart-multipathd-service`
