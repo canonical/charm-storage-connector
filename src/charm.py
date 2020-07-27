@@ -31,7 +31,8 @@ class CharmIscsiConnectorCharm(CharmBase):
     ISCSI_CONF_PATH = Path('/etc/iscsi')
     ISCSI_CONF = ISCSI_CONF_PATH / 'iscsid.conf'
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
-    MULTIPATH_CONF_PATH = Path('/etc/multipath/conf.d')
+    MULTIPATH_CONF_DIR = Path('/etc/multipath')
+    MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
     MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
@@ -47,7 +48,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.framework.observe(self.on.start, self.on_start)
         self.framework.observe(self.on.config_changed, self.render_config)
         self.framework.observe(self.on.restart_iscsi_services_action, self.on_restart_iscsi_services_action)
-        self.framework.observe(self.on.restart_multipathd_service_action, self.on_restart_multipathd_service_action)
+        self.framework.observe(self.on.reload_multipathd_service_action, self.on_reload_multipathd_service_action)
         # -- initialize states --
         self.state.set_default(installed=False)
         self.state.set_default(configured=False)
@@ -75,6 +76,9 @@ class CharmIscsiConnectorCharm(CharmBase):
         """Render configuration templates upon config change."""
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self.ISCSI_CONF_PATH.mkdir(
+            exist_ok=True,
+            mode=0o750)
+        self.MULTIPATH_CONF_DIR.mkdir(
             exist_ok=True,
             mode=0o750)
         self.MULTIPATH_CONF_PATH.mkdir(
@@ -199,9 +203,9 @@ class CharmIscsiConnectorCharm(CharmBase):
 
     def _iscsid_configuration(self, tenv, charm_config):
         ctxt = {
-            'node-startup': charm_config.get('iscsi-node-startup'),
-            'node-fastabort': charm_config.get('iscsi-node-session-iscsi-fastabort'),
-            'node-session-scan': charm.config.get('iscsi-node-session-scan')
+            'node_startup': charm_config.get('iscsi-node-startup'),
+            'node_fastabort': charm_config.get('iscsi-node-session-iscsi-fastabort'),
+            'node_session_scan': charm_config.get('iscsi-node-session-scan')
         }
         logging.info('Rendering iscsid.conf template.')
         template = tenv.get_template('iscsid.conf.j2')
