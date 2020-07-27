@@ -83,7 +83,7 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         self._iscsi_initiator(tenv, charm_config)
         self._iscsid_configuration(tenv)
-        self._multipath_configuration(tenv)
+        self._multipath_configuration(tenv, charm_config)
 
         logging.info('Enabling iscsid')
         # Enabling the service ensure it start on reboots.
@@ -148,14 +148,14 @@ class CharmIscsiConnectorCharm(CharmBase):
             return False
         return True
         
-    def _fetch_optional_resource(self, resource_name):
-        resource = None
-        try:
-            resource = self.framework.model.resources.fetch(resource_name)
-        except ModelError:
-            # The resource is optional, the charm should not error without it.
-            pass
-        return resource
+    # def _fetch_optional_resource(self, resource_name):
+    #     resource = None
+    #     try:
+    #         resource = self.framework.model.resources.fetch(resource_name)
+    #     except ModelError:
+    #         # The resource is optional, the charm should not error without it.
+    #         pass
+    #     return resource
 
     def _defer_once(self, event):
         """Defer the given event, but only once."""
@@ -195,7 +195,8 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
 
     def _iscsid_configuration(self, tenv):
-        iscsi_resource = self._fetch_optional_resource('iscsid-conf')
+        # iscsi_resource = self._fetch_optional_resource('iscsid-conf')
+        iscsi_resource = {}
         ctxt = {}
         if iscsi_resource:
             logging.info('Resource iscsi.conf found, rendering.')
@@ -207,16 +208,14 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.ISCSI_CONF.write_text(rendered_content)
         self.ISCSI_CONF.chmod(0o600)
 
-    def _multipath_configuration(self, tenv):
-        multipath_resource = self._fetch_optional_resource('multipath-conf')
+    def _multipath_configuration(self, tenv, charm_config):
         ctxt = {}
-        if multipath_resource:
-            logging.info('Resource multipath.conf found, rendering.')
-            rendered_content = multipath_resource.read_text()
-        else:
-            logging.info('Rendering default multipath.conf template.')
-            template = tenv.get_template('multipath.conf.j2')
-            rendered_content = template.render(ctxt)
+        multipath_conf_devices = charm_config.get('multipath-conf-devices')
+        if multipath_conf_devices:
+            conf_devices = json.loads(multipath_conf_devices)
+            ctxt['conf_devices'] = conf_devices
+        template = tenv.get_template('multipath.conf.j2')
+        rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
         self.MULTIPATH_CONF.chmod(0o644)
 

@@ -16,6 +16,20 @@ options:
             the list, and provide the correct initiator associated to 
             it. If not defined, the initiator name will be provided 
             randomly. Format : 
-            '{"hostname1": "iqn.yyyy-mm.naming-authority:uniquename1", 
+            '{"hostname1": "iqn.yyyy-mm.naming-authority:uniquename1",
               "hostname2": "iqn.yyyy-mm.naming-authority:uniquename2}'
+    multipath-conf-devices:
+        type: string
+        default:
+        description: |
+            In multipath.conf, add a device specific configuration. String should be of 
+            json dictionary format. Example: 
+                value : '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_grouping_policy":"group_by_prio"}'
+                will produce this configuration:
+                device {
+                    vendor "PURE"
+                    product "FlashArray"
+                    fast_io_fail_tmo 10
+                    path_grouping_policy "group_by_prio"
+                }
     
