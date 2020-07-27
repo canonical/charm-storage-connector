@@ -32,4 +32,14 @@ options:
                     fast_io_fail_tmo 10
                     path_grouping_policy "group_by_prio"
                 }
-    
+    iscsi-node-startup:
+        type: string
+        default: automatic
+        description: Startup setting for sessions. Either automatic or manual
+    iscsi-node-session-iscsi-fastabort:
+        type: string
+        default: 'Yes'
+    iscsi-node-session-scan:
+        type: string
+        default: auto
+        description: Automatic scans are performed on startup, on login, and on AEN/AER reception on devices supporting it.

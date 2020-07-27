@@ -85,7 +85,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         tenv = Environment(loader=FileSystemLoader('templates'))
 
         self._iscsi_initiator(tenv, charm_config)
-        self._iscsid_configuration(tenv)
+        self._iscsid_configuration(tenv, charm_config)
         self._multipath_configuration(tenv, charm_config)
 
         logging.info('Enabling iscsid')
@@ -197,17 +197,15 @@ class CharmIscsiConnectorCharm(CharmBase):
         rendered_content = template.render(ctxt)
         self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
 
-    def _iscsid_configuration(self, tenv):
-        # iscsi_resource = self._fetch_optional_resource('iscsid-conf')
-        iscsi_resource = {}
-        ctxt = {}
-        if iscsi_resource:
-            logging.info('Resource iscsi.conf found, rendering.')
-            rendered_content = iscsi_resource.read_text()
-        else:
-            logging.info('Rendering default iscsid.conf template.')
-            template = tenv.get_template('iscsid.conf.j2')
-            rendered_content = template.render(ctxt)
+    def _iscsid_configuration(self, tenv, charm_config):
+        ctxt = {
+            'node-startup': charm_config.get('iscsi-node-startup'),
+            'node-fastabort': charm_config.get('iscsi-node-session-iscsi-fastabort'),
+            'node-session-scan': charm.config.get('iscsi-node-session-scan')
+        }
+        logging.info('Rendering iscsid.conf template.')
+        template = tenv.get_template('iscsid.conf.j2')
+        rendered_content = template.render(ctxt)
         self.ISCSI_CONF.write_text(rendered_content)
         self.ISCSI_CONF.chmod(0o600)
 

@@ -4,7 +4,7 @@
 # local changes will be overwritten.
 ###############################################################################
 iscsid.startup = /bin/systemctl start iscsid.socket
-node.startup = automatic
+node.startup = {{ node-startup }}
 node.leading_login = No
 node.session.timeo.replacement_timeout = 120
 node.conn[0].timeo.login_timeout = 15
@@ -26,5 +26,5 @@ node.conn[0].iscsi.MaxRecvDataSegmentLength = 262144
 node.conn[0].iscsi.MaxXmitDataSegmentLength = 0
 discovery.sendtargets.iscsi.MaxRecvDataSegmentLength = 32768
 node.session.nr_sessions = 1
-node.session.iscsi.FastAbort = Yes
-node.session.scan = auto
+node.session.iscsi.FastAbort = {{ node-fastabort }}
+node.session.scan = {{ node-session-scan }}
