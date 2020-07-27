@@ -1,4 +1,4 @@
-# charm-iscsi-connector Charm
+# Iscsi Connector Charm
 
 Overview
 --------

@@ -1,17 +1,20 @@
-tests:
-# - bionic_model:
-#   - zaza.charm_tests.noop.tests.NoopTestBionic
-# - xenial_model:
-#   - zaza.charm_tests.noop.tests.NoopTestXenial
- - zaza.charm_tests.noop.tests.NoopTest
-configure:
-# - bionic_model:
-#   - zaza.charm_tests.noop.setup.basic_setup_bionic
-# - xenial_model:
-#   - zaza.charm_tests.noop.setup.basic_setup_xenial
- - zaza.charm_tests.noop.setup.basic_setup
-gate_bundles:
-    - xenial
-    - bionic
+charm_name: iscsi-connector
+
 smoke_bundles:
     - focal
+
+gate_bundles:
+    # - bionic
+    - focal
+
+configure:
+ - zaza.openstack.charm_tests.iscsi-connector.setup.basic_target_setup
+ - zaza.openstack.charm_tests.iscsi-connector.setup.configure_iscsi_target
+
+tests:
+ - zaza.openstack.charm_tests.iscsi-connector.tests.ISCSIConnectorTest
+
+target_deploy_status:
+  iscsi-connector:
+    workload-status: blocked
+    workload-status-message: "Missing"

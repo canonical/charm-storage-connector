@@ -1,1 +1,2 @@
 git+https://github.com/openstack-charmers/zaza.git#egg=zaza
+git+https://github.com/camille-rodriguez/zaza-openstack-tests.git#egg=zaza.openstack

@@ -139,10 +139,13 @@ class CharmIscsiConnectorCharm(CharmBase):
     # Additional functions
     def _check_mandatory_config(self):
         charm_config = self.framework.model.config
+        missing_config = []
         for config in self.MANDATORY_CONFIG:
             if charm_config.get(config) is None:
-                self.unit.status = BlockedStatus("Missing mandatory configuration option: {}".format(config))
-                return False
+                missing_config.append(config)
+        if missing_config:
+            self.unit.status = BlockedStatus("Missing mandatory configuration option {}".format(missing_config))
+            return False
         return True
         
     def _fetch_optional_resource(self, resource_name):
