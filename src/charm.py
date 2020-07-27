@@ -104,8 +104,8 @@ class CharmIscsiConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus('Iscsi discovery failed against given target')
             return
        
-        logging.info('Restarting multipathd service')
-        subprocess.check_call(['systemctl', 'restart', self.MULTIPATHD_SERVICE])
+        logging.info('Reloading multipathd service')
+        subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
 
         logging.info("Setting started state")
         self.state.started = True
@@ -131,9 +131,9 @@ class CharmIscsiConnectorCharm(CharmBase):
             subprocess.check_call(['systemctl', 'restart', service])
             event.set_results({"success": "true"})
 
-    def on_restart_multipathd_service_action(self, event):
+    def on_reload_multipathd_service_action(self, event):
         event.log('Restarting multipathd service')
-        subprocess.check_call(['systemctl', 'restart', self.MULTIPATHD_SERVICE])
+        subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
         event.set_results({"success": "true"})
 
     # Additional functions
@@ -226,6 +226,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets', '-p', target + ':' + port])
 
     def _iscsiadm_login(self):
+        # add check if already logged in, no error if it is.
         subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
 
 if __name__ == "__main__":
