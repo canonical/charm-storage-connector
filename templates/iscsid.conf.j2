@@ -4,7 +4,7 @@
 # local changes will be overwritten.
 ###############################################################################
 iscsid.startup = /bin/systemctl start iscsid.socket
-node.startup = automatic
+node.startup = {{ node-startup }}
 node.leading_login = No
 node.session.timeo.replacement_timeout = 120
 node.conn[0].timeo.login_timeout = 15
