@@ -31,7 +31,7 @@ class CharmIscsiConnectorCharm(CharmBase):
     ISCSI_CONF_PATH = Path('/etc/iscsi')
     ISCSI_CONF = ISCSI_CONF_PATH / 'iscsid.conf'
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
-    MULTIPATH_CONF_PATH = Path('/etc')
+    MULTIPATH_CONF_PATH = Path('/etc/multipath/conf.d')
     MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
@@ -75,6 +75,9 @@ class CharmIscsiConnectorCharm(CharmBase):
         """Render configuration templates upon config change."""
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self.ISCSI_CONF_PATH.mkdir(
+            exist_ok=True,
+            mode=0o750)
+        self.MULTIPATH_CONF_PATH.mkdir(
             exist_ok=True,
             mode=0o750)
 
