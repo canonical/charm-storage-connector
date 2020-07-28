@@ -8,8 +8,10 @@ __pycache__/
 .last*
 
 .tox/
-.coverage
+.coverage*
 htmlcov
+cover/*
+.stestr/*
 
 # vi
 .*.swp

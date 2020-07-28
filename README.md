@@ -43,14 +43,6 @@ To deploy it on a ubuntu unit, deploy cs:ubuntu first.
 To edit the config of the target or the port:
 `juju config iscsi-connector target=<TARGET_IP> port=<PORT>`
 
-<<<<<<< HEAD
-To input a custom iscsid.conf or multipathd.conf configuration, edit the bundle or
-provide the resources post-deployment to juju:
-`juju attach-resource iscsi-connector iscsid-conf=<file_path>`
-`juju attach-resource iscsi-connector multipathd-conf=<file_path>`
-
-=======
->>>>>>> a4aa887b432884211626dad201ca49cd05919dec
 To restart services manually, two actions exist:
 `juju run-action --unit ubuntu/0 restart-iscsi-services`
 `juju run-action --unit ubuntu/0 restart-multipathd-service`
