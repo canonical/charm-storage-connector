@@ -4,8 +4,8 @@ smoke_bundles:
     - focal
 
 gate_bundles:
-    # - bionic
-    - focal
+    - bionic
+    #- focal
 
 configure:
  - zaza.openstack.charm_tests.iscsi-connector.setup.basic_target_setup

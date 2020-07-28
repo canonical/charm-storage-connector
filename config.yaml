@@ -38,19 +38,19 @@ options:
         description: Authentication method (CHAP or None). Default is None.
     iscsi-node-session-auth-username:
         type: string
-        default:
+        default: ''
         description: CHAP username for initiator authentication by the target
     iscsi-node-session-auth-password:
         type: string
-        default:
+        default: ''
         description: CHAP password for initiator authentication by the target
     iscsi-node-session-auth-username-in:
         type: string
-        default:
+        default: ''
         description: CHAP username for target authentication by the initiator
     iscsi-node-session-auth-password-in:
         type: string
-        default:
+        default: ''
         description: CHAP password for target authentication by the initiator
     iscsi-node-startup:
         type: string

@@ -35,10 +35,10 @@ defaults {
     delay_wait_checks 12
 }
 devices {
-    {% if conf_devices %}
+    {% if conf_devices -%}
     device {
         {% for key, value in conf_devices.items() %} {{ key }} {{ value }}
-        {% endfor %}
+        {% endfor -%}
     }
-    {% endif %}
+    {% endif -%}
 }
