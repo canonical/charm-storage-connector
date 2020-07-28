@@ -16,7 +16,7 @@ from jinja2 import Environment, FileSystemLoader
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus, MaintenanceStatus, BlockedStatus, ModelError
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 
 logger = logging.getLogger(__name__)
@@ -110,7 +110,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             logging.error('Iscsi discovery and login failed. Traceback: {}'.format(e))
             self.unit.status = BlockedStatus('Iscsi discovery failed against given target')
             return
-       
+
         logging.info('Reloading multipathd service')
         subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
 
@@ -133,12 +133,14 @@ class CharmIscsiConnectorCharm(CharmBase):
 
     # Actions
     def on_restart_iscsi_services_action(self, event):
+        """Restart iscsid and open-iscsi services."""
         event.log('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
             subprocess.check_call(['systemctl', 'restart', service])
             event.set_results({"success": "true"})
 
     def on_reload_multipathd_service_action(self, event):
+        """Reload multipathd service."""
         event.log('Restarting multipathd service')
         subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
         event.set_results({"success": "true"})
@@ -154,15 +156,6 @@ class CharmIscsiConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus("Missing mandatory configuration option {}".format(missing_config))
             return False
         return True
-        
-    # def _fetch_optional_resource(self, resource_name):
-    #     resource = None
-    #     try:
-    #         resource = self.framework.model.resources.fetch(resource_name)
-    #     except ModelError:
-    #         # The resource is optional, the charm should not error without it.
-    #         pass
-    #     return resource
 
     def _defer_once(self, event):
         """Defer the given event, but only once."""
@@ -238,6 +231,7 @@ class CharmIscsiConnectorCharm(CharmBase):
     def _iscsiadm_login(self):
         # add check if already logged in, no error if it is.
         subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
+
 
 if __name__ == "__main__":
     main(CharmIscsiConnectorCharm)

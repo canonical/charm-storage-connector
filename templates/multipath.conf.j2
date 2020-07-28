@@ -38,7 +38,7 @@ devices {
     {% if conf_devices -%}
     device {
         {% for key, value in conf_devices.items() %} {{ key }} {{ value }}
-        {% endfor -%}
+        {% endfor %}
     }
     {% endif -%}
 }
