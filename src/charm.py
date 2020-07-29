@@ -137,13 +137,13 @@ class CharmIscsiConnectorCharm(CharmBase):
         event.log('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
             subprocess.check_call(['systemctl', 'restart', service])
-            event.set_results({"success": "true"})
+            event.set_results({"success": "True"})
 
     def on_reload_multipathd_service_action(self, event):
         """Reload multipathd service."""
         event.log('Restarting multipathd service')
         subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
-        event.set_results({"success": "true"})
+        event.set_results({"success": "True"})
 
     # Additional functions
     def _check_mandatory_config(self):

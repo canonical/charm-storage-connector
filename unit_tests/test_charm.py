@@ -1,5 +1,6 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, create_autospec, MagicMock
+import subprocess
 
 from ops.framework import EventBase
 from ops.testing import Harness
@@ -15,6 +16,9 @@ from charm import CharmIscsiConnectorCharm
 
 
 class TestCharm(unittest.TestCase):
+
+    subprocess_mock = create_autospec(subprocess.check_call, return_value='True')
+    subprocess.check_call = subprocess_mock
 
     def setUp(self):
         # Setup
@@ -40,49 +44,40 @@ class TestCharm(unittest.TestCase):
         harness.begin()
         self.assertFalse(harness.charm.state.started)
         harness.charm.on.start.emit()
+        # event deferred as charm not configured yet
+        self.assertFalse(harness.charm.state.started)
+        # mock charm as configured
+        harness.charm.state.configured = True
+        harness.charm.on.start.emit()
         self.assertTrue(harness.charm.state.started)
-        #maybe failing because it is defered when configuration is not done yet? 
-    
-    def test_on_config_changed(self):
-
-
-    def mock_render_config(self):
         
+    def test_on_restart_iscsi_services_action(self):
+        harness = Harness(CharmIscsiConnectorCharm)
+        harness.begin()
+        action_event = FakeActionEvent()
+        harness.charm.on_restart_iscsi_services_action(action_event)
+        self.assertEqual(action_event.results['success'], 'True')
+
+    def test_on_reload_multipathd_service_action(self):
+        harness = Harness(CharmIscsiConnectorCharm)
+        harness.begin()
+        action_event = FakeActionEvent()
+        harness.charm.on_reload_multipathd_service_action(action_event)
+        self.assertEqual(action_event.results['success'], 'True')
 
 
+class FakeActionEvent(EventBase):
+    def __init__(self, params=None):
+        super().__init__(None)
+        if params is None:
+            params = {}
+        self.params = params
 
-    # def test_config_changed(self):
-    #     harness = Harness(CharmIscsiConnectorCharm)
-    #     # from 0.8 you should also do:
-    #     # self.addCleanup(harness.cleanup)
-    #     harness.begin()
-    #     self.assertEqual(harness.charm.model.config.get('target'), None)
-    #     harness.update_config({"target": "10.5.0.125"})
-    #     self.assertEqual(list(harness.charm._config.get('target')), ["10.5.0.125"])
-
-    # def test_restart_iscsi_services_action(self):
-    #     harness = Harness(CharmIscsiConnectorCharm)
-    #     harness.begin()
-    #     action_event = Mock(params={"fail": ""})
-
-
-    # def test_action(self):
-    #     harness = Harness(CharmIscsiConnectorCharm)
-    #     harness.begin()
-    #     # the harness doesn't (yet!) help much with actions themselves
-    #     action_event = Mock(params={"fail": ""})
-    #     harness.charm.on_restart_iscsi_services_action(action_event)
-
-    #     self.assertTrue(action_event.set_result.called)
-
-    # def test_action_fail(self):
-    #     harness = Harness(CharmIscsiConnectorCharm)
-    #     harness.begin()
-    #     action_event = Mock(params={"fail": "fail this"})
-    #     harness.charm.on_restart_iscsi_services_action(action_event)
-
-    #     self.assertEqual(action_event.fail.call_args, [("fail this",)])
-
+    def set_results(self, results):
+        self.results = results
+    
+    def log(self, log):
+        self.log = log
 
 
 if __name__ == "__main__":
