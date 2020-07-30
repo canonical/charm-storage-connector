@@ -32,7 +32,6 @@ class CharmIscsiConnectorCharm(CharmBase):
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
     MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
 
-
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
@@ -102,12 +101,12 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         logging.info('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
-            try: 
+            try:
                 logging.info('Restarting {} service'.format(service))
                 subprocess.check_call(['systemctl', 'restart', service])
             except Exception as e:
-                logging.error('An error occured while restarting {}.' +
-                              'Traceback: {}'.format(service, e))
+                logging.error('An error occured while restarting {}. Traceback: {}'
+                              .format(service, e))
 
         if not self._check_mandatory_config():
             return
@@ -183,11 +182,11 @@ class CharmIscsiConnectorCharm(CharmBase):
                 logging.debug("Found event: {} x {}".format(event_path, notice_count))
 
         if notice_count > 1:
-            logging.debug("Not deferring {} notice count of " +
-                          "{}".format(handle, notice_count))
+            logging.debug("Not deferring {} notice count of {}"
+                          .format(handle, notice_count))
         else:
-            logging.debug("Deferring {} notice count of " +
-                          "{}".format(handle, notice_count))
+            logging.debug("Deferring {} notice count of {}"
+                          .format(handle, notice_count))
             event.defer()
 
     def _iscsi_initiator(self, tenv, charm_config):
@@ -203,7 +202,8 @@ class CharmIscsiConnectorCharm(CharmBase):
         if not initiator_name:
             initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
             logging.warning('The hostname was not found in the initiator dictionary!' +
-                            'The random iqn {} will be used for {}'.format(initiator_name, hostname))
+                            'The random iqn {} will be used for {}'
+                            .format(initiator_name, hostname))
 
         logging.info('Rendering initiatorname.iscsi')
         ctxt = {'initiator_name': initiator_name}
