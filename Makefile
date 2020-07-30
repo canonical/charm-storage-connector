@@ -28,11 +28,11 @@ clean:
 	@rm -rf ${CHARM_BUILD_DIR}/${CHARM_NAME}
 
 build:
-	@echo "Building charm to base directory ${CHARM_BUILD_DIR}/${CHARM_NAME}"
+	@echo "Building charm to base directory ${CHARM_BUILD_DIR}"
 	@-git describe --tags > ./repo-info
-	@mkdir -p ${CHARM_BUILD_DIR}/${CHARM_NAME}
-	@cp -a ./* ${CHARM_BUILD_DIR}/${CHARM_NAME}
+	@mkdir -p ${CHARM_BUILD_DIR}
 	@tox -e build
+	@mv ${CHARM_NAME}.charm ${CHARM_BUILD_DIR}/.
 
 
 release: clean build
