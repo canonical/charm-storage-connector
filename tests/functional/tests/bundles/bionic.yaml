@@ -1,11 +1,10 @@
 series: bionic
-local_overlay_enabled: false
 applications:
   ubuntu-target:
     charm: cs:ubuntu
     num_units: 1
   iscsi-connector:
-    charm: ../../../../iscsi-connector.charm
+    charm: "{{ CHARM_BUILD_DIR }}/{{ charm_name }}"
   ubuntu:
     charm: cs:ubuntu
     num_units: 1
