@@ -1,7 +1,4 @@
 #! /usr/bin/env python3
-# -*- coding: utf-8 -*-
-# vim:fenc=utf-8
-# Copyright © 2020 Camille Rodriguez camille.rodriguez@canonical.com
 
 """Iscsi Connector Charm."""
 
@@ -23,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class CharmIscsiConnectorCharm(CharmBase):
-    """Class reprisenting this Operator charm."""
+    """Class representing this Operator charm."""
 
     state = StoredState()
     PACKAGES = ['multipath-tools']
@@ -34,6 +31,7 @@ class CharmIscsiConnectorCharm(CharmBase):
     MULTIPATH_CONF_DIR = Path('/etc/multipath')
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
     MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
+
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
@@ -47,8 +45,10 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.start, self.on_start)
         self.framework.observe(self.on.config_changed, self.render_config)
-        self.framework.observe(self.on.restart_iscsi_services_action, self.on_restart_iscsi_services_action)
-        self.framework.observe(self.on.reload_multipathd_service_action, self.on_reload_multipathd_service_action)
+        self.framework.observe(self.on.restart_iscsi_services_action,
+                               self.on_restart_iscsi_services_action)
+        self.framework.observe(self.on.reload_multipathd_service_action,
+                               self.on_reload_multipathd_service_action)
         # -- initialize states --
         self.state.set_default(installed=False)
         self.state.set_default(configured=False)
@@ -67,6 +67,14 @@ class CharmIscsiConnectorCharm(CharmBase):
             if not pkg.is_installed:
                 pkg.mark_install()
                 cache.commit()
+
+        # enable services to ensure they start upon reboot
+        for service in self.ISCSI_SERVICES:
+            try:
+                logging.info('Enabling {} service'.format(service))
+                subprocess.check_call(['systemctl', 'enable', service])
+            except Exception as e:
+                logging.error('Unable to enable {}. Traceback: {}'.format(service, e))
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
@@ -92,13 +100,14 @@ class CharmIscsiConnectorCharm(CharmBase):
         self._iscsid_configuration(tenv, charm_config)
         self._multipath_configuration(tenv, charm_config)
 
-        logging.info('Enabling iscsid')
-        # Enabling the service ensure it start on reboots.
-        subprocess.check_call(['systemctl', 'enable', self.ISCSI_SERVICES[0]])
-
         logging.info('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
-            subprocess.check_call(['systemctl', 'restart', service])
+            try: 
+                logging.info('Restarting {} service'.format(service))
+                subprocess.check_call(['systemctl', 'restart', service])
+            except Exception as e:
+                logging.error('An error occured while restarting {}.' +
+                              'Traceback: {}'.format(service, e))
 
         if not self._check_mandatory_config():
             return
@@ -108,11 +117,15 @@ class CharmIscsiConnectorCharm(CharmBase):
             self._iscsiadm_login()
         except subprocess.CalledProcessError as e:
             logging.error('Iscsi discovery and login failed. Traceback: {}'.format(e))
-            self.unit.status = BlockedStatus('Iscsi discovery failed against given target')
+            self.unit.status = BlockedStatus('Iscsi discovery failed against target')
             return
 
         logging.info('Reloading multipathd service')
-        subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
+        try:
+            subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
+        except Exception as e:
+            self.unit.status = BlockedStatus("An error occured while reloading " +
+                                             "multipathd service: {}".format(e))
 
         logging.info("Setting started state")
         self.state.started = True
@@ -122,7 +135,8 @@ class CharmIscsiConnectorCharm(CharmBase):
     def on_start(self, event):
         """Handle start state."""
         if not self.state.configured:
-            logging.warning("Start called before configuration complete, deferring event: {}".format(event.handle))
+            logging.warning("Start called before configuration complete, " +
+                            "deferring event: {}".format(event.handle))
             self._defer_once(event)
             return
         self.unit.status = MaintenanceStatus("Starting charm software")
@@ -153,7 +167,8 @@ class CharmIscsiConnectorCharm(CharmBase):
             if charm_config.get(config) is None:
                 missing_config.append(config)
         if missing_config:
-            self.unit.status = BlockedStatus("Missing mandatory configuration option {}".format(missing_config))
+            self.unit.status = BlockedStatus("Missing mandatory configuration " +
+                                             "option(s) {}".format(missing_config))
             return False
         return True
 
@@ -168,9 +183,11 @@ class CharmIscsiConnectorCharm(CharmBase):
                 logging.debug("Found event: {} x {}".format(event_path, notice_count))
 
         if notice_count > 1:
-            logging.debug("Not deferring {} notice count of {}".format(handle, notice_count))
+            logging.debug("Not deferring {} notice count of " +
+                          "{}".format(handle, notice_count))
         else:
-            logging.debug("Deferring {} notice count of {}".format(handle, notice_count))
+            logging.debug("Deferring {} notice count of " +
+                          "{}".format(handle, notice_count))
             event.defer()
 
     def _iscsi_initiator(self, tenv, charm_config):
@@ -184,9 +201,9 @@ class CharmIscsiConnectorCharm(CharmBase):
                 initiator_name = initiators_dict[hostname]
 
         if not initiator_name:
-            logging.warning('The hostname was not found in the initiator dictionary! A random name will be ' +
-                            'generated for {}'.format(hostname))
             initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
+            logging.warning('The hostname was not found in the initiator dictionary!' +
+                            'The random iqn {} will be used for {}'.format(initiator_name, hostname))
 
         logging.info('Rendering initiatorname.iscsi')
         ctxt = {'initiator_name': initiator_name}
@@ -226,7 +243,8 @@ class CharmIscsiConnectorCharm(CharmBase):
         target = charm_config.get('target')
         port = charm_config.get('port')
         logging.info('Launching iscsiadm discovery against target')
-        subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets', '-p', target + ':' + port])
+        subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets',
+                               '-p', target + ':' + port])
 
     def _iscsiadm_login(self):
         # add check if already logged in, no error if it is.

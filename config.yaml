@@ -55,11 +55,20 @@ options:
     iscsi-node-startup:
         type: string
         default: automatic
-        description: Startup setting for sessions. Either automatic or manual
+        description: Startup setting for sessions. Either 'automatic' or 'manual'
     iscsi-node-session-iscsi-fastabort:
         type: string
         default: 'Yes'
+        description: |
+            Some targets like IET prefer after an initiator has sent a task
+            management function like an ABORT TASK or LOGICAL UNIT RESET, that
+            it does not respond to PDUs like R2Ts. To enable this behavior, set
+            this config option to 'Yes'. To disable it, set it to 'No'.
     iscsi-node-session-scan:
         type: string
         default: auto
-        description: Automatic scans are performed on startup, on login, and on AEN/AER reception on devices supporting it.
+        description: |
+            Automatic scans are performed on startup, on login, and on AEN/AER
+            reception on devices supporting it. To prevent doing automatic scans
+            that would add unwanted luns to the system, set to 'manual'. Default
+            is 'auto'.

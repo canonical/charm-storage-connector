@@ -1,11 +1,11 @@
 name: iscsi-connector
-summary: Describe your charm here
+summary: A charm that connects a node to an ISCSI endpoint
 maintainers:
     - Camille Rodriguez <camille.rodriguez@canonical.com>
 description: |
-    A nice long description of what the product does and any
-    high level information about how the charm provides the product,
-    on which platform, etc.
+    The ISCSI Connector charm is an open-source charm that can be installed as a
+    subordinate to any VM or baremetal machine. It configures the node to connect 
+    to a specific ISCSI target. 
 tags:
     - iscsi
 subordinate: true
