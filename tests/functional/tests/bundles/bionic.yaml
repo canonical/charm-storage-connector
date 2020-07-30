@@ -4,7 +4,7 @@ applications:
     charm: cs:ubuntu
     num_units: 1
   iscsi-connector:
-    charm: "{{ CHARM_BUILD_DIR }}/{{ charm_name }}"
+    charm: ../../../../iscsi-connector.charm
   ubuntu:
     charm: cs:ubuntu
     num_units: 1
