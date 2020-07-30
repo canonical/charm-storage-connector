@@ -65,5 +65,5 @@ cause of the error.
 Contact
 -------
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
- - Bug Tracker: [here](https://discourse.juju.is/c/charming)
+ - Bug Tracker: [here](https://bugs.launchpad.net/charm-iscsi-connector)
  
