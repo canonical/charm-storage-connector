@@ -1,11 +1,10 @@
 series: focal
-local_overlay_enabled: false
 applications:
   ubuntu-target:
     charm: cs:ubuntu
     num_units: 1
   iscsi-connector:
-    charm: ../../../../iscsi-connector.charm
+    charm: #path is defined in overlay because of bug https://github.com/openstack-charmers/zaza/issues/379
   ubuntu:
     charm: cs:ubuntu
     num_units: 1
