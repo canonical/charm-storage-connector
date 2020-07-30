@@ -16,8 +16,8 @@ help:
 	@echo " make release - run clean and build targets"
 	@echo " make lint - run flake8 and black"
 	@echo " make proof - run charm proof"
-	@echo " make unittests - run the tests defined in the unittest subdirectory"
-	@echo " make functional - run the tests defined in the functional subdirectory"
+	@echo " make unit - run the tests defined in the unittest subdirectory"
+	@echo " make func - run the tests defined in the functional subdirectory"
 	@echo " make test - run lint, proof, unittests and functional targets"
 	@echo ""
 
@@ -43,17 +43,18 @@ lint:
 
 proof:
 	@echo "Running charm proof"
+	@echo "Some warnings in charm proof do not apply to Operator charms."
 	@-charm proof
 
 unit:
 	@echo "Running unit tests"
 	@tox -e unit
 
-functional: build
+func: build
 	@echo "Executing functional tests in ${CHARM_BUILD_DIR}"
-	@CHARM_BUILD_DIR=${CHARM_BUILD_DIR} tox -e functional
+	@CHARM_BUILD_DIR=${CHARM_BUILD_DIR} tox -e func
 
-test: lint proof unittests functional
+test: lint proof unit func
 	@echo "Tests completed for charm ${CHARM_NAME}."
 
 # The targets below don't depend on a file
