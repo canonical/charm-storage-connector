@@ -2,7 +2,7 @@ PYTHON := /usr/bin/python3
 
 PROJECTPATH=$(dir $(realpath $(MAKEFILE_LIST)))
 ifndef CHARM_BUILD_DIR
-	CHARM_BUILD_DIR=${PROJECTPATH}/.build
+	CHARM_BUILD_DIR=${PROJECTPATH}.build
 endif
 METADATA_FILE="metadata.yaml"
 CHARM_NAME=$(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $$2}')
@@ -29,7 +29,6 @@ clean:
 
 build:
 	@echo "Building charm to base directory ${CHARM_BUILD_DIR}"
-	@-git describe --tags > ./repo-info
 	@mkdir -p ${CHARM_BUILD_DIR}
 	@tox -e build
 	@mv ${CHARM_NAME}.charm ${CHARM_BUILD_DIR}/.
@@ -46,7 +45,7 @@ proof:
 	@echo "Running charm proof"
 	@-charm proof
 
-unittests:
+unit:
 	@echo "Running unit tests"
 	@tox -e unit
 
