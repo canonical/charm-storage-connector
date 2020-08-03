@@ -65,5 +65,6 @@ cause of the error.
 Contact
 -------
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
+ - Maintainers: BootStack Charmers <bootstack-charmers@lists.canonical.com>
  - Bug Tracker: [here](https://bugs.launchpad.net/charm-iscsi-connector)
  
