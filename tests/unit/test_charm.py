@@ -30,22 +30,22 @@ class TestCharm(unittest.TestCase):
         """Test installation."""
         harness = Harness(CharmIscsiConnectorCharm)
         harness.begin()
-        self.assertFalse(harness.charm.state.installed)
+        self.assertFalse(harness.charm.store.installed)
         harness.charm.on.install.emit()
-        self.assertTrue(harness.charm.state.installed)
+        self.assertTrue(harness.charm.store.installed)
 
     def test_on_start(self):
         """Test on start hook."""
         harness = Harness(CharmIscsiConnectorCharm)
         harness.begin()
-        self.assertFalse(harness.charm.state.started)
+        self.assertFalse(harness.charm.store.started)
         harness.charm.on.start.emit()
         # event deferred as charm not configured yet
-        self.assertFalse(harness.charm.state.started)
+        self.assertFalse(harness.charm.store.started)
         # mock charm as configured
-        harness.charm.state.configured = True
+        harness.charm.store.configured = True
         harness.charm.on.start.emit()
-        self.assertTrue(harness.charm.state.started)
+        self.assertTrue(harness.charm.store.started)
 
     def test_on_restart_iscsi_services_action(self):
         """Test on restart action."""

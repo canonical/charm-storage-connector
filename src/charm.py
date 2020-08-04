@@ -65,7 +65,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             pkg = cache[package]
             if not pkg.is_installed:
                 pkg.mark_install()
-        
+
         cache.commit()
         # enable services to ensure they start upon reboot
         for service in self.ISCSI_SERVICES:
