@@ -72,7 +72,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             try:
                 logging.info('Enabling {} service'.format(service))
                 subprocess.check_call(['systemctl', 'enable', service])
-            except Exception as e:
+            except subprocess.CalledProcessError as e:
                 logging.error('Unable to enable {}. Traceback: {}'.format(service, e))
 
         self.unit.status = MaintenanceStatus("Install complete")
@@ -104,7 +104,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             try:
                 logging.info('Restarting {} service'.format(service))
                 subprocess.check_call(['systemctl', 'restart', service])
-            except Exception as e:
+            except subprocess.CalledProcessError as e:
                 logging.error('An error occured while restarting {}. Traceback: {}'
                               .format(service, e))
 
@@ -122,7 +122,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         logging.info('Reloading multipathd service')
         try:
             subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
-        except Exception as e:
+        except subprocess.CalledProcessError as e:
             self.unit.status = BlockedStatus("An error occured while reloading " +
                                              "multipathd service: {}".format(e))
 

@@ -46,15 +46,15 @@ proof:
 	@echo "Some warnings in charm proof do not apply to Operator charms."
 	@-charm proof
 
-unit:
+unittests:
 	@echo "Running unit tests"
 	@tox -e unit
 
-func: build
+functional: build
 	@echo "Executing functional tests in ${CHARM_BUILD_DIR}"
 	@CHARM_BUILD_DIR=${CHARM_BUILD_DIR} tox -e func
 
-test: lint proof unit func
+test: lint proof unittests functional
 	@echo "Tests completed for charm ${CHARM_NAME}."
 
 # The targets below don't depend on a file
