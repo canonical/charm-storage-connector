@@ -33,7 +33,7 @@ To deploy this subordinate charm on a ubuntu unit, deploy `cs:ubuntu` first.
 ```
 juju add-model my-test-model
 juju deploy cs:ubuntu --series bionic
-juju deploy ./iscsi-connector.charm
+juju deploy cs:iscsi-connector
 juju relate ubuntu iscsi-connector
 ```
 
