@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class CharmIscsiConnectorCharm(CharmBase):
     """Class representing this Operator charm."""
 
-    state = StoredState()
+    store = StoredState()
     PACKAGES = ['multipath-tools']
 
     ISCSI_CONF_PATH = Path('/etc/iscsi')
@@ -49,9 +49,9 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.framework.observe(self.on.reload_multipathd_service_action,
                                self.on_reload_multipathd_service_action)
         # -- initialize states --
-        self.state.set_default(installed=False)
-        self.state.set_default(configured=False)
-        self.state.set_default(started=False)
+        self.store.set_default(installed=False)
+        self.store.set_default(configured=False)
+        self.store.set_default(started=False)
 
     def on_install(self, event):
         """Handle install state."""
@@ -77,7 +77,7 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
-        self.state.installed = True
+        self.store.installed = True
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
@@ -127,13 +127,13 @@ class CharmIscsiConnectorCharm(CharmBase):
                                              "multipathd service: {}".format(e))
 
         logging.info("Setting started state")
-        self.state.started = True
-        self.state.configured = True
+        self.store.started = True
+        self.store.configured = True
         self.unit.status = ActiveStatus("Unit is ready")
 
     def on_start(self, event):
         """Handle start state."""
-        if not self.state.configured:
+        if not self.store.configured:
             logging.warning("Start called before configuration complete, " +
                             "deferring event: {}".format(event.handle))
             self._defer_once(event)
@@ -141,7 +141,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Starting charm software")
         # Start software
         self.unit.status = ActiveStatus("Unit is ready")
-        self.state.started = True
+        self.store.started = True
         logging.info("Started")
 
     # Actions
