@@ -65,15 +65,15 @@ class CharmIscsiConnectorCharm(CharmBase):
             pkg = cache[package]
             if not pkg.is_installed:
                 pkg.mark_install()
-                cache.commit()
-
+        
+        cache.commit()
         # enable services to ensure they start upon reboot
         for service in self.ISCSI_SERVICES:
             try:
-                logging.info('Enabling {} service'.format(service))
+                logging.info('Enabling %s service', service)
                 subprocess.check_call(['systemctl', 'enable', service])
-            except subprocess.CalledProcessError as e:
-                logging.error('Unable to enable {}. Traceback: {}'.format(service, e))
+            except subprocess.CalledProcessError:
+                logging.exception('Unable to enable %s.', service)
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
@@ -102,11 +102,10 @@ class CharmIscsiConnectorCharm(CharmBase):
         logging.info('Restarting iscsi services')
         for service in self.ISCSI_SERVICES:
             try:
-                logging.info('Restarting {} service'.format(service))
+                logging.info('Restarting %s service', service)
                 subprocess.check_call(['systemctl', 'restart', service])
-            except subprocess.CalledProcessError as e:
-                logging.error('An error occured while restarting {}. Traceback: {}'
-                              .format(service, e))
+            except subprocess.CalledProcessError:
+                logging.exception('An error occured while restarting %s.', service)
 
         if not self._check_mandatory_config():
             return
@@ -114,17 +113,18 @@ class CharmIscsiConnectorCharm(CharmBase):
         try:
             self._iscsiadm_discovery(charm_config)
             self._iscsiadm_login()
-        except subprocess.CalledProcessError as e:
-            logging.error('Iscsi discovery and login failed. Traceback: {}'.format(e))
+        except subprocess.CalledProcessError:
+            logging.exception('Iscsi discovery and login failed.')
             self.unit.status = BlockedStatus('Iscsi discovery failed against target')
             return
 
         logging.info('Reloading multipathd service')
         try:
             subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
-        except subprocess.CalledProcessError as e:
-            self.unit.status = BlockedStatus("An error occured while reloading " +
-                                             "multipathd service: {}".format(e))
+        except subprocess.CalledProcessError:
+            message = "An error occured while reloading the multipathd service."
+            self.unit.status = BlockedStatus(message)
+            logging.exception('%s', message)
 
         logging.info("Setting started state")
         self.store.started = True
@@ -135,7 +135,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         """Handle start state."""
         if not self.store.configured:
             logging.warning("Start called before configuration complete, " +
-                            "deferring event: {}".format(event.handle))
+                            "deferring event: %s", event.handle)
             self._defer_once(event)
             return
         self.unit.status = MaintenanceStatus("Starting charm software")
@@ -179,14 +179,12 @@ class CharmIscsiConnectorCharm(CharmBase):
         for event_path, _, _ in self.framework._storage.notices(None):
             if event_path.startswith(handle.split('[')[0]):
                 notice_count += 1
-                logging.debug("Found event: {} x {}".format(event_path, notice_count))
+                logging.debug("Found event: %s x %d", event_path, notice_count)
 
         if notice_count > 1:
-            logging.debug("Not deferring {} notice count of {}"
-                          .format(handle, notice_count))
+            logging.debug("Not deferring %s notice count of %d", handle, notice_count)
         else:
-            logging.debug("Deferring {} notice count of {}"
-                          .format(handle, notice_count))
+            logging.debug("Deferring %s notice count of %d", handle, notice_count)
             event.defer()
 
     def _iscsi_initiator(self, tenv, charm_config):
@@ -202,8 +200,8 @@ class CharmIscsiConnectorCharm(CharmBase):
         if not initiator_name:
             initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
             logging.warning('The hostname was not found in the initiator dictionary!' +
-                            'The random iqn {} will be used for {}'
-                            .format(initiator_name, hostname))
+                            'The random iqn %s will be used for %s',
+                            initiator_name, hostname)
 
         logging.info('Rendering initiatorname.iscsi')
         ctxt = {'initiator_name': initiator_name}
