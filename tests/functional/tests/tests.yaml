@@ -8,11 +8,11 @@ gate_bundles:
     - focal
 
 configure:
- - zaza.openstack.charm_tests.iscsi-connector.setup.basic_target_setup
- - zaza.openstack.charm_tests.iscsi-connector.setup.configure_iscsi_target
+ - iscsi-connector-func-tests.setup.basic_target_setup
+ - iscsi-connector-func-tests.setup.configure_iscsi_target
 
 tests:
- - zaza.openstack.charm_tests.iscsi-connector.tests.ISCSIConnectorTest
+ - iscsi-connector-func-tests.tests.ISCSIConnectorTest
 
 target_deploy_status:
   iscsi-connector:
