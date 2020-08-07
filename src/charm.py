@@ -116,7 +116,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             self._iscsiadm_login()
         except subprocess.CalledProcessError:
             logging.exception('Iscsi discovery and login failed.')
-            self.unit.status = BlockedStatus('Iscsi discovery failed against target')
+            self.unit.status = BlockedStatus('Iscsi discovery or login failed against target')
             return
 
         logging.info('Reloading multipathd service')
