@@ -42,6 +42,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         super().__init__(*args)
         # -- standard hook observation
         self.framework.observe(self.on.install, self.on_install)
+        self.framework.observe(self.on.install, self.render_config)
         self.framework.observe(self.on.start, self.on_start)
         self.framework.observe(self.on.config_changed, self.render_config)
         self.framework.observe(self.on.restart_iscsi_services_action,
