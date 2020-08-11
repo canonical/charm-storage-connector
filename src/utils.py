@@ -28,18 +28,4 @@ def init_is_systemd(service_name=None):
     """
     if str(service_name).startswith("snap."):
         return True
-    if lsb_release()['DISTRIB_CODENAME'] == 'trusty':
-        return False
     return os.path.isdir(SYSTEMD_SYSTEM)
-
-
-def lsb_release():
-    """Return /etc/os-release in a dict."""
-    d = {}
-    with open('/etc/os-release', 'r') as lsb:
-        for line in lsb:
-            s = line.split('=')
-            if len(s) != 2:
-                continue
-            d[s[0].strip()] = s[1].strip()
-    return d
