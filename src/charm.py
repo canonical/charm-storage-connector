@@ -4,18 +4,21 @@
 
 import json
 import logging
-from pathlib import Path
 import socket
 import subprocess
+from pathlib import Path
 
 import apt
+
 from jinja2 import Environment, FileSystemLoader
+
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 import utils
+
 
 logger = logging.getLogger(__name__)
 
@@ -59,9 +62,13 @@ class CharmIscsiConnectorCharm(CharmBase):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
 
-        # check if container
-        if utils.is_container:
-            self.unit.status = BlockedStatus("This charm is not supported on containers.")
+        if utils.is_container():
+            self.unit.status = BlockedStatus(
+                'This charm is not supported on containers.'
+            )
+            logging.debug(
+                'This charm is not supported on containers. Stopping execution.'
+            )
             return
 
         # install packages
@@ -88,6 +95,15 @@ class CharmIscsiConnectorCharm(CharmBase):
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
+        if utils.is_container:
+            self.unit.status = BlockedStatus(
+                'This charm is not supported on containers.'
+            )
+            logging.debug(
+                'This charm is not supported on containers. Stopping execution.'
+            )
+            return
+
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self.ISCSI_CONF_PATH.mkdir(
             exist_ok=True,
@@ -247,10 +263,12 @@ class CharmIscsiConnectorCharm(CharmBase):
         logging.info('Launching iscsiadm discovery against target')
         try:
             subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets',
-                                '-p', target + ':' + port])
+                                  '-p', target + ':' + port])
         except subprocess.CalledProcessError:
             logging.exception('Iscsi discovery failed.')
-            self.unit.status = BlockedStatus('Iscsi discovery failed against target')
+            self.unit.status = BlockedStatus(
+                'Iscsi discovery failed against target'
+            )
 
     def _iscsiadm_login(self):
         # add check if already logged in, no error if it is.
@@ -258,7 +276,9 @@ class CharmIscsiConnectorCharm(CharmBase):
             subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
         except subprocess.CalledProcessError:
             logging.exception('Iscsi login failed.')
-            self.unit.status = BlockedStatus('Iscsi login failed against target')
+            self.unit.status = BlockedStatus(
+                'Iscsi login failed against target'
+            )
 
 
 if __name__ == "__main__":

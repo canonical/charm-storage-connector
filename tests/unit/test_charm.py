@@ -3,18 +3,23 @@
 
 import subprocess
 import unittest
-from unittest.mock import create_autospec
+from unittest.mock import create_autospec, Mock
 
 from charm import CharmIscsiConnectorCharm
+from src import charm
+
 from ops.framework import EventBase
 from ops.testing import Harness
 
+import src.utils as utils
 
 class TestCharm(unittest.TestCase):
     """Charm Unit Tests."""
 
     subprocess_mock = create_autospec(subprocess.check_call, return_value='True')
     subprocess.check_call = subprocess_mock
+
+    charm.utils.is_container = Mock(return_value = False)
 
     def setUp(self):
         """Test setup."""
