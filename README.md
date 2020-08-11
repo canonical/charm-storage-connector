@@ -4,7 +4,7 @@
 
 This charm configures a unit to connect to an iscsi endpoint. It acts as a subordinate
 charm, which can be deployed on any baremetal or virtual machine, alongside a main
-charm.
+charm. It is not supported in containers. 
 
 This charm will:
 - Generate an iscsi initiator name and put it in /etc/iscsi/initiatorname.iscsi
