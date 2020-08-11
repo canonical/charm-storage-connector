@@ -30,12 +30,17 @@ clean:
 build:
     # `charmcraft build` currently does not work on ubuntu bionic (bug: https://github.com/canonical/charmcraft/issues/102)
 	@echo "Building charm to base directory ${CHARM_BUILD_DIR}"
-	@mkdir -p ${CHARM_BUILD_DIR}
+	@mkdir -p ${CHARM_BUILD_DIR}/
 	@tox -e build
 	@mv ${CHARM_NAME}.charm ${CHARM_BUILD_DIR}/.
 
+# bypassing bug https://github.com/canonical/charmcraft/issues/109
+unpack: build
+	@mkdir -p ${CHARM_BUILD_DIR}/${CHARM_NAME}
+	@echo "Unpacking built .charm into ${CHARM_BUILD_DIR}/${CHARM_NAME}"
+	@cd ${CHARM_BUILD_DIR}/${CHARM_NAME} && unzip -q ${CHARM_BUILD_DIR}/${CHARM_NAME}.charm
 
-release: clean build
+release: clean build unpack
 	@echo "Charm is built at ${CHARM_BUILD_DIR}/${CHARM_NAME}"
 
 lint:

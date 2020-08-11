@@ -33,5 +33,6 @@ env
 
 # build folder
 build
+.build
 iscsi-connector.charm
 charm.egg-info
