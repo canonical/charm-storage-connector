@@ -110,14 +110,11 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         if not self._check_mandatory_config():
             return
-        logging.info('Launching iscsiadm discovery and login')
-        try:
+
+        if charm_config.get('discovery-and-login'):
+            logging.info('Launching iscsiadm discovery and login')
             self._iscsiadm_discovery(charm_config)
             self._iscsiadm_login()
-        except subprocess.CalledProcessError:
-            logging.exception('Iscsi discovery and login failed.')
-            self.unit.status = BlockedStatus('Iscsi discovery or login failed against target')
-            return
 
         logging.info('Reloading multipathd service')
         try:
@@ -242,12 +239,20 @@ class CharmIscsiConnectorCharm(CharmBase):
         target = charm_config.get('target')
         port = charm_config.get('port')
         logging.info('Launching iscsiadm discovery against target')
-        subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets',
-                               '-p', target + ':' + port])
+        try:
+            subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets',
+                                '-p', target + ':' + port])
+        except subprocess.CalledProcessError:
+            logging.exception('Iscsi discovery failed.')
+            self.unit.status = BlockedStatus('Iscsi discovery failed against target')
 
     def _iscsiadm_login(self):
         # add check if already logged in, no error if it is.
-        subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
+        try:
+            subprocess.check_call(['iscsiadm', '-m', 'node', '--login'])
+        except subprocess.CalledProcessError:
+            logging.exception('Iscsi login failed.')
+            self.unit.status = BlockedStatus('Iscsi login failed against target')
 
 
 if __name__ == "__main__":
