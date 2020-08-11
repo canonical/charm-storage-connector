@@ -15,6 +15,7 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
+import utils
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,11 @@ class CharmIscsiConnectorCharm(CharmBase):
     def on_install(self, event):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
+
+        # check if container
+        if utils.is_container:
+            self.unit.status = BlockedStatus("This charm is not supported on containers.")
+            return
 
         # install packages
         cache = apt.cache.Cache()
