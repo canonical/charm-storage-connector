@@ -1,9 +1,12 @@
 
 """Unit tests for ISCSI Connector charm."""
 
+import shutil
 import subprocess
+import tempfile
 import unittest
 from unittest.mock import create_autospec, Mock
+from pathlib import Path
 
 from charm import CharmIscsiConnectorCharm
 from src import charm
@@ -19,53 +22,71 @@ class TestCharm(unittest.TestCase):
     subprocess_mock = create_autospec(subprocess.check_call, return_value='True')
     subprocess.check_call = subprocess_mock
 
-    charm.utils.is_container = Mock(return_value = False)
+    
 
     def setUp(self):
         """Test setup."""
+        self.tempdir = tempfile.mkdtemp()
         self.harness = Harness(CharmIscsiConnectorCharm)
-        self.harness.begin()
+        self.harness.set_leader(is_leader=True)
+    
+    def tearDown(self):
+        """Remove testing artifacts."""
+        shutil.rmtree(self.tempdir)
 
     def test__init__works_without_a_hitch(self):
         """Test init."""
-        harness = Harness(CharmIscsiConnectorCharm)
-        harness.begin()
+        self.harness.begin()
+
+    def test_abort_if_host_is_container(self):
+        self.harness.begin()
+        charm.utils.is_container = Mock(return_value = True)
+        self.assertFalse(self.harness.charm.store.installed)
 
     def test_on_install(self):
         """Test installation."""
-        harness = Harness(CharmIscsiConnectorCharm)
-        harness.begin()
-        self.assertFalse(harness.charm.store.installed)
-        harness.charm.on.install.emit()
-        self.assertTrue(harness.charm.store.installed)
+        charm.utils.is_container = Mock(return_value = False)
+        # self.harness.charm.ISCSI_CONF_PATH = tempfile.mkdtemp()
+        # with self.tempdir as td: Mock('src.charm.Path', lambda: return td)
+        charm.Path = Mock(return_value = tempfile.mkdtemp())
+        charm.CharmIscsiConnectorCharm.ISCSI_CONF_PATH = tempfile.mkdtemp()
+        print(charm.CharmIscsiConnectorCharm.ISCSI_CONF_PATH)
+        
+        # self.harness.charm.ISCSI_CONF_DIR = self.tempdir
+
+        self.harness.begin()
+        self.harness.charm.ISCSI_CONF_PATH = Path(tempfile.mkdtemp())
+
+        self.assertFalse(self.harness.charm.store.installed)
+        self.harness.charm.on.install.emit()
+
+        
+        self.assertTrue(self.harness.charm.store.installed)
 
     def test_on_start(self):
         """Test on start hook."""
-        harness = Harness(CharmIscsiConnectorCharm)
-        harness.begin()
-        self.assertFalse(harness.charm.store.started)
-        harness.charm.on.start.emit()
+        self.harness.begin()
+        self.assertFalse(self.harness.charm.store.started)
+        self.harness.charm.on.start.emit()
         # event deferred as charm not configured yet
-        self.assertFalse(harness.charm.store.started)
+        self.assertFalse(self.harness.charm.store.started)
         # mock charm as configured
-        harness.charm.store.configured = True
-        harness.charm.on.start.emit()
-        self.assertTrue(harness.charm.store.started)
+        self.harness.charm.store.configured = True
+        self.harness.charm.on.start.emit()
+        self.assertTrue(self.harness.charm.store.started)
 
     def test_on_restart_iscsi_services_action(self):
         """Test on restart action."""
-        harness = Harness(CharmIscsiConnectorCharm)
-        harness.begin()
+        self.harness.begin()
         action_event = FakeActionEvent()
-        harness.charm.on_restart_iscsi_services_action(action_event)
+        self.harness.charm.on_restart_iscsi_services_action(action_event)
         self.assertEqual(action_event.results['success'], 'True')
 
     def test_on_reload_multipathd_service_action(self):
         """Test on reload action."""
-        harness = Harness(CharmIscsiConnectorCharm)
-        harness.begin()
+        self.harness.begin()
         action_event = FakeActionEvent()
-        harness.charm.on_reload_multipathd_service_action(action_event)
+        self.harness.charm.on_reload_multipathd_service_action(action_event)
         self.assertEqual(action_event.results['success'], 'True')
 
 

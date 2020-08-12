@@ -95,7 +95,7 @@ class CharmIscsiConnectorCharm(CharmBase):
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
-        if utils.is_container:
+        if utils.is_container():
             self.unit.status = BlockedStatus(
                 'This charm is not supported on containers.'
             )
