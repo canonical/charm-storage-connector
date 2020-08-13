@@ -1,11 +1,12 @@
 
 """Unit tests for ISCSI Connector charm."""
 
+import os
 import shutil
 import subprocess
 import tempfile
 import unittest
-from unittest.mock import create_autospec, Mock
+from unittest.mock import create_autospec, Mock, patch
 from pathlib import Path
 
 from charm import CharmIscsiConnectorCharm
@@ -29,7 +30,7 @@ class TestCharm(unittest.TestCase):
         self.tempdir = tempfile.mkdtemp()
         self.harness = Harness(CharmIscsiConnectorCharm)
         self.harness.set_leader(is_leader=True)
-    
+        
     def tearDown(self):
         """Remove testing artifacts."""
         shutil.rmtree(self.tempdir)
@@ -43,24 +44,21 @@ class TestCharm(unittest.TestCase):
         charm.utils.is_container = Mock(return_value = True)
         self.assertFalse(self.harness.charm.store.installed)
 
+
+    @patch("Path", new=tempfile.mkdtemps())
     def test_on_install(self):
         """Test installation."""
         charm.utils.is_container = Mock(return_value = False)
-        # self.harness.charm.ISCSI_CONF_PATH = tempfile.mkdtemp()
-        # with self.tempdir as td: Mock('src.charm.Path', lambda: return td)
-        charm.Path = Mock(return_value = tempfile.mkdtemp())
-        charm.CharmIscsiConnectorCharm.ISCSI_CONF_PATH = tempfile.mkdtemp()
-        print(charm.CharmIscsiConnectorCharm.ISCSI_CONF_PATH)
-        
-        # self.harness.charm.ISCSI_CONF_DIR = self.tempdir
 
         self.harness.begin()
         self.harness.charm.ISCSI_CONF_PATH = Path(tempfile.mkdtemp())
+        self.harness.charm.MULTIPATH_CONF_DIR = Path(tempfile.mkdtemp())
+        
 
         self.assertFalse(self.harness.charm.store.installed)
         self.harness.charm.on.install.emit()
 
-        
+        self.assertTrue(os.path.isfile(self.harness.charm.ISCSI_CONF))
         self.assertTrue(self.harness.charm.store.installed)
 
     def test_on_start(self):
