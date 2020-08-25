@@ -66,7 +66,7 @@ class CharmIscsiConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'This charm is not supported on containers.'
             )
-            logging.debug(
+            logging.info(
                 'This charm is not supported on containers. Stopping execution.'
             )
             return
