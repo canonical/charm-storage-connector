@@ -1,13 +1,14 @@
-name: iscsi-connector
-summary: A charm that connects a node to an ISCSI endpoint
+name: storage-connector
+summary: A charm that connects a node to an storage endpoint
 maintainers:
     - Camille Rodriguez <camille.rodriguez@canonical.com>
 description: |
-    The ISCSI Connector charm is an open-source charm that can be installed as a
+    The Storage Connector charm is an open-source charm that can be installed as a
     subordinate to any VM or baremetal machine. It configures the node to connect 
-    to a specific ISCSI target. 
+    to either a specific ISCSI or Fibre Channel target. 
 tags:
     - iscsi
+    - fibrechannel
 subordinate: true
 series:
     - bionic

@@ -1,13 +1,25 @@
 options:
-    target:
+    storage-type:
+        type: string
+        default:
+        description: 'Type of storage connection. Can either be "iscsi" or "fc" for fibre channel.'
+    fc-wwpn:
+        type: string
+        default:
+        description: 'Fibre Channel World Wide Port Name for each FC port. Must be formatted into an array.'
+    fc-lun-names:
+        type: string
+        default:
+        description: 'Fibre Channel LUN names. Must be formatted into an array.'
+    iscsi-target:
         type: string
         default:
         description: 'ISCSI target IP'
-    port:
+    iscsi-port:
         type: string
         default:
         description: 'ISCSI target port'
-    discovery-and-login:
+    iscsi-discovery-and-login:
         type: boolean
         default: True
         description: |

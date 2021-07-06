@@ -39,7 +39,8 @@ class CharmIscsiConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    MANDATORY_CONFIG = ['target', 'port']
+    ISCSI_MANDATORY_CONFIG = ['target', 'port']
+    FC_MANDATORY_CONFIG = ['fc-wwpn', 'fc-lun-names']
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -54,9 +55,11 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.framework.observe(self.on.reload_multipathd_service_action,
                                self.on_reload_multipathd_service_action)
         # -- initialize states --
-        self.store.set_default(installed=False)
-        self.store.set_default(configured=False)
-        self.store.set_default(started=False)
+        self._stored.set_default(installed=False)
+        self._stored.set_default(configured=False)
+        self._stored.set_default(started=False)
+        # -- base values -- 
+        self._stored.set_default(storage_type=charm_config.get('storage-type').lower())
 
     def on_install(self, event):
         """Handle install state."""
@@ -82,12 +85,15 @@ class CharmIscsiConnectorCharm(CharmBase):
 
         cache.commit()
         # enable services to ensure they start upon reboot
-        for service in self.ISCSI_SERVICES:
-            try:
-                logging.info('Enabling %s service', service)
-                subprocess.check_call(['systemctl', 'enable', service])
-            except subprocess.CalledProcessError:
-                logging.exception('Unable to enable %s.', service)
+        if self._stored.storage_type == 'iscsi':
+            for service in self.ISCSI_SERVICES:
+                try:
+                    logging.info('Enabling %s service', service)
+                    subprocess.check_call(['systemctl', 'enable', service])
+                except subprocess.CalledProcessError:
+                    logging.exception('Unable to enable %s.', service)
+        elif self._stored.storage_type == 'fc':
+            print('to complete')
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
@@ -181,8 +187,15 @@ class CharmIscsiConnectorCharm(CharmBase):
     # Additional functions
     def _check_mandatory_config(self):
         charm_config = self.framework.model.config
+        if self._stored.storage_type == "fc":
+            mandatory_config = FC_MANDATORY_CONFIG
+        elif self._stored.storage_type == "iscsi":
+            mandatory_config = ISCSI_MANDATORY_CONFIG
+        else:
+            self.unit.status = BlockedStatus("Missing or incorrect storage type")
+
         missing_config = []
-        for config in self.MANDATORY_CONFIG:
+        for config in mandatory_config:
             if charm_config.get(config) is None:
                 missing_config.append(config)
         if missing_config:
@@ -258,8 +271,8 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.MULTIPATH_CONF.chmod(0o644)
 
     def _iscsiadm_discovery(self, charm_config):
-        target = charm_config.get('target')
-        port = charm_config.get('port')
+        target = charm_config.get('iscsi-target')
+        port = charm_config.get('iscsi-port')
         logging.info('Launching iscsiadm discovery against target')
         try:
             subprocess.check_call(['iscsiadm', '-m', 'discovery', '-t', 'sendtargets',
