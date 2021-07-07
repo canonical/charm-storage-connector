@@ -23,10 +23,10 @@ import utils
 logger = logging.getLogger(__name__)
 
 
-class CharmIscsiConnectorCharm(CharmBase):
+class CharmStorageConnectorCharm(CharmBase):
     """Class representing this Operator charm."""
 
-    store = StoredState()
+    _stored = StoredState()
     PACKAGES = ['multipath-tools']
 
     ISCSI_CONF_PATH = Path('/etc/iscsi')
@@ -59,7 +59,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         self._stored.set_default(configured=False)
         self._stored.set_default(started=False)
         # -- base values -- 
-        self._stored.set_default(storage_type=charm_config.get('storage-type').lower())
+        self._stored.set_default(storage_type=self.charm_config.get('storage-type').lower())
 
     def on_install(self, event):
         """Handle install state."""
@@ -93,11 +93,12 @@ class CharmIscsiConnectorCharm(CharmBase):
                 except subprocess.CalledProcessError:
                     logging.exception('Unable to enable %s.', service)
         elif self._stored.storage_type == 'fc':
+            # TODO: is there any service to install for FC
             print('to complete')
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
-        self.store.installed = True
+        self._stored.installed = True
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
@@ -111,9 +112,11 @@ class CharmIscsiConnectorCharm(CharmBase):
             return
 
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
-        self.ISCSI_CONF_PATH.mkdir(
-            exist_ok=True,
-            mode=0o750)
+        if self._stored.storage_type == 'iscsi':
+            self.ISCSI_CONF_PATH.mkdir(
+                exist_ok=True,
+                mode=0o750)
+
         self.MULTIPATH_CONF_DIR.mkdir(
             exist_ok=True,
             mode=0o750)
@@ -124,22 +127,24 @@ class CharmIscsiConnectorCharm(CharmBase):
         charm_config = self.framework.model.config
         tenv = Environment(loader=FileSystemLoader('templates'))
 
-        self._iscsi_initiator(tenv, charm_config)
-        self._iscsid_configuration(tenv, charm_config)
+        if self._stored.storage_type == 'iscsi':
+            self._iscsi_initiator(tenv, charm_config)
+            self._iscsid_configuration(tenv, charm_config)
         self._multipath_configuration(tenv, charm_config)
 
-        logging.info('Restarting iscsi services')
-        for service in self.ISCSI_SERVICES:
-            try:
-                logging.info('Restarting %s service', service)
-                subprocess.check_call(['systemctl', 'restart', service])
-            except subprocess.CalledProcessError:
-                logging.exception('An error occured while restarting %s.', service)
+        if self._stored.storage_type == 'iscsi':
+            logging.info('Restarting iscsi services')
+            for service in self.ISCSI_SERVICES:
+                try:
+                    logging.info('Restarting %s service', service)
+                    subprocess.check_call(['systemctl', 'restart', service])
+                except subprocess.CalledProcessError:
+                    logging.exception('An error occured while restarting %s.', service)
 
         if not self._check_mandatory_config():
             return
 
-        if charm_config.get('discovery-and-login'):
+        if charm_config.get('discovery-and-login') and self._stored.storage_type == 'iscsi':
             logging.info('Launching iscsiadm discovery and login')
             self._iscsiadm_discovery(charm_config)
             self._iscsiadm_login()
@@ -153,13 +158,13 @@ class CharmIscsiConnectorCharm(CharmBase):
             logging.exception('%s', message)
 
         logging.info("Setting started state")
-        self.store.started = True
-        self.store.configured = True
+        self._stored.started = True
+        self._stored.configured = True
         self.unit.status = ActiveStatus("Unit is ready")
 
     def on_start(self, event):
         """Handle start state."""
-        if not self.store.configured:
+        if not self._stored.configured:
             logging.warning("Start called before configuration complete, " +
                             "deferring event: %s", event.handle)
             self._defer_once(event)
@@ -167,7 +172,7 @@ class CharmIscsiConnectorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Starting charm software")
         # Start software
         self.unit.status = ActiveStatus("Unit is ready")
-        self.store.started = True
+        self._stored.started = True
         logging.info("Started")
 
     # Actions
@@ -186,14 +191,14 @@ class CharmIscsiConnectorCharm(CharmBase):
 
     # Additional functions
     def _check_mandatory_config(self):
-        charm_config = self.framework.model.config
         if self._stored.storage_type == "fc":
-            mandatory_config = FC_MANDATORY_CONFIG
+            mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
-            mandatory_config = ISCSI_MANDATORY_CONFIG
+            mandatory_config = self.ISCSI_MANDATORY_CONFIG
         else:
             self.unit.status = BlockedStatus("Missing or incorrect storage type")
 
+        charm_config = self.framework.model.config
         missing_config = []
         for config in mandatory_config:
             if charm_config.get(config) is None:
@@ -295,4 +300,4 @@ class CharmIscsiConnectorCharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(CharmIscsiConnectorCharm)
+    main(CharmStorageConnectorCharm)

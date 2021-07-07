@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, create_autospec, patch
 
-from charm import CharmIscsiConnectorCharm
+from charm import CharmStorageConnectorCharm
 
 from ops.framework import EventBase
 from ops.testing import Harness
@@ -26,7 +26,7 @@ class TestCharm(unittest.TestCase):
     def setUp(self):
         """Test setup."""
         self.tempdir = tempfile.mkdtemp()
-        self.harness = Harness(CharmIscsiConnectorCharm)
+        self.harness = Harness(CharmStorageConnectorCharm)
         self.harness.set_leader(is_leader=True)
         self.harness.begin()
 
@@ -40,16 +40,16 @@ class TestCharm(unittest.TestCase):
     def test_abort_if_host_is_container(self):
         """Test if charm stops when deployed on a container."""
         charm.utils.is_container = Mock(return_value=True)
-        self.assertFalse(self.harness.charm.store.installed)
+        self.assertFalse(self.harness.charm._stored.installed)
 
-    @patch("charm.CharmIscsiConnectorCharm._iscsi_initiator")
+    @patch("charm.CharmStorageConnectorCharm._iscsi_initiator")
     @patch("charm.utils.is_container")
-    @patch("charm.CharmIscsiConnectorCharm.MULTIPATH_CONF")
-    @patch("charm.CharmIscsiConnectorCharm.MULTIPATH_CONF_PATH")
-    @patch("charm.CharmIscsiConnectorCharm.MULTIPATH_CONF_DIR")
-    @patch("charm.CharmIscsiConnectorCharm.ISCSI_INITIATOR_NAME")
-    @patch("charm.CharmIscsiConnectorCharm.ISCSI_CONF")
-    @patch("charm.CharmIscsiConnectorCharm.ISCSI_CONF_PATH")
+    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF")
+    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF_PATH")
+    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF_DIR")
+    @patch("charm.CharmStorageConnectorCharm.ISCSI_INITIATOR_NAME")
+    @patch("charm.CharmStorageConnectorCharm.ISCSI_CONF")
+    @patch("charm.CharmStorageConnectorCharm.ISCSI_CONF_PATH")
     def test_on_install(self, iscsi_conf_path, iscsi_conf, iscsi_initiator_name,
                         multipath_conf_dir, multipath_conf_path, multipath_conf,
                         is_container, iscsi_initiator):
@@ -63,23 +63,23 @@ class TestCharm(unittest.TestCase):
         multipath_conf.return_value = multipath_conf_path / 'multipath.conf'
         iscsi_initiator.return_value = None
 
-        self.assertFalse(self.harness.charm.store.installed)
+        self.assertFalse(self.harness.charm._stored.installed)
         self.harness.charm.on.install.emit()
 
         self.assertTrue(os.path.exists(self.harness.charm.ISCSI_CONF))
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
-        self.assertTrue(self.harness.charm.store.installed)
+        self.assertTrue(self.harness.charm._stored.installed)
 
     def test_on_start(self):
         """Test on start hook."""
-        self.assertFalse(self.harness.charm.store.started)
+        self.assertFalse(self.harness.charm._stored.started)
         self.harness.charm.on.start.emit()
         # event deferred as charm not configured yet
-        self.assertFalse(self.harness.charm.store.started)
+        self.assertFalse(self.harness.charm._stored.started)
         # mock charm as configured
-        self.harness.charm.store.configured = True
+        self.harness.charm._stored.configured = True
         self.harness.charm.on.start.emit()
-        self.assertTrue(self.harness.charm.store.started)
+        self.assertTrue(self.harness.charm._stored.started)
 
     def test_on_restart_iscsi_services_action(self):
         """Test on restart action."""

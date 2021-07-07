@@ -21,13 +21,13 @@ import zaza.model
 import zaza.openstack.charm_tests.test_utils as test_utils
 
 
-class ISCSIConnectorTest(test_utils.BaseCharmTest):
+class StorageConnectorTest(test_utils.BaseCharmTest):
     """Class for iscsi-connector tests."""
 
     @classmethod
     def setUpClass(cls):
         """Run class setup for running glance tests."""
-        super(ISCSIConnectorTest, cls).setUpClass()
+        super(StorageConnectorTest, cls).setUpClass()
 
     def configure_iscsi_connector(self):
         """Configure iscsi connector."""
@@ -36,6 +36,7 @@ class ISCSIConnectorTest(test_utils.BaseCharmTest):
         target_ip = zaza.model.get_app_ips('ubuntu-target')[0]
         initiator_dictionary = json.dumps({unit_fqdn: iqn})
         conf = {
+            'storage-type': 'iscsi',
             'initiator-dictionary': initiator_dictionary,
             'target': target_ip,
             'port': '3260',

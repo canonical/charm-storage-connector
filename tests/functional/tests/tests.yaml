@@ -12,7 +12,7 @@ configure:
  - iscsi-connector-func-tests.setup.configure_iscsi_target
 
 tests:
- - iscsi-connector-func-tests.tests.ISCSIConnectorTest
+ - iscsi-connector-func-tests.tests.StorageConnectorTest
 
 target_deploy_status:
   iscsi-connector:
