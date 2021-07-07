@@ -40,7 +40,7 @@ class CharmStorageConnectorCharm(CharmBase):
     MULTIPATHD_SERVICE = 'multipathd'
 
     ISCSI_MANDATORY_CONFIG = ['target', 'port']
-    FC_MANDATORY_CONFIG = ['fc-wwpn', 'fc-lun-names']
+    FC_MANDATORY_CONFIG = ['fc-lun-names']
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -191,14 +191,22 @@ class CharmStorageConnectorCharm(CharmBase):
 
     # Additional functions
     def _check_mandatory_config(self):
+        charm_config = self.framework.model.config
         if self._stored.storage_type == "fc":
+            if charm_config.get('fc-wwnn') and not charm_config.get('fc-wwpn'):
+                self.FC_MANDATORY_CONFIG.append('fc-wwnn')
+            elif not charm_config.get('fc-wwnn') and charm_config.get('fc-wwpn'):
+                self.FC_MANDATORY_CONFIG.append('fc-wwpn')
+            else:
+                self.unit.status = BlockedStatus("For FC storage type, either fc-wwpn or fc-wwnn must be provided, but not both.")
+                return False
             mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
             mandatory_config = self.ISCSI_MANDATORY_CONFIG
         else:
             self.unit.status = BlockedStatus("Missing or incorrect storage type")
-
-        charm_config = self.framework.model.config
+            return False
+        
         missing_config = []
         for config in mandatory_config:
             if charm_config.get(config) is None:
