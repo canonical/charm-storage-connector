@@ -59,20 +59,13 @@ class CharmStorageConnectorCharm(CharmBase):
         self._stored.set_default(installed=False)
         self._stored.set_default(configured=False)
         self._stored.set_default(started=False)
-        # -- base values -- 
+        # -- base values --
         self._stored.set_default(storage_type=self.charm_config.get('storage-type').lower())
 
     def on_install(self, event):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
-
-        if utils.is_container():
-            self.unit.status = BlockedStatus(
-                'This charm is not supported on containers.'
-            )
-            logging.info(
-                'This charm is not supported on containers. Stopping execution.'
-            )
+        if self.check_if_container():
             return
 
         # install packages
@@ -103,37 +96,22 @@ class CharmStorageConnectorCharm(CharmBase):
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
-        if utils.is_container():
-            self.unit.status = BlockedStatus(
-                'This charm is not supported on containers.'
-            )
-            logging.debug(
-                'This charm is not supported on containers. Stopping execution.'
-            )
+        if self.check_if_container():
+            return
+
+        if not self._check_mandatory_config():
             return
 
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
-        if self._stored.storage_type == 'iscsi':
-            self.ISCSI_CONF_PATH.mkdir(
-                exist_ok=True,
-                mode=0o750)
-
-        self.MULTIPATH_CONF_DIR.mkdir(
-            exist_ok=True,
-            mode=0o750)
-        self.MULTIPATH_CONF_PATH.mkdir(
-            exist_ok=True,
-            mode=0o750)
+        self._create_directories()
 
         charm_config = self.framework.model.config
         tenv = Environment(loader=FileSystemLoader('templates'))
 
+        self._multipath_configuration(tenv, charm_config)
         if self._stored.storage_type == 'iscsi':
             self._iscsi_initiator(tenv, charm_config)
             self._iscsid_configuration(tenv, charm_config)
-        self._multipath_configuration(tenv, charm_config)
-
-        if self._stored.storage_type == 'iscsi':
             logging.info('Restarting iscsi services')
             for service in self.ISCSI_SERVICES:
                 try:
@@ -142,13 +120,10 @@ class CharmStorageConnectorCharm(CharmBase):
                 except subprocess.CalledProcessError:
                     logging.exception('An error occured while restarting %s.', service)
 
-        if not self._check_mandatory_config():
-            return
-
-        if charm_config.get('discovery-and-login') and self._stored.storage_type == 'iscsi':
-            logging.info('Launching iscsiadm discovery and login')
-            self._iscsiadm_discovery(charm_config)
-            self._iscsiadm_login()
+            if charm_config.get('discovery-and-login'):
+                logging.info('Launching iscsiadm discovery and login')
+                self._iscsiadm_discovery(charm_config)
+                self._iscsiadm_login()
 
         logging.info('Reloading multipathd service')
         try:
@@ -199,7 +174,8 @@ class CharmStorageConnectorCharm(CharmBase):
             elif not charm_config.get('fc-wwnn') and charm_config.get('fc-wwpn'):
                 self.FC_MANDATORY_CONFIG.append('fc-wwpn')
             else:
-                self.unit.status = BlockedStatus("For FC storage type, either fc-wwpn or fc-wwnn must be provided, but not both.")
+                self.unit.status = BlockedStatus("For FC storage type, either fc-wwpn \
+                                   or fc-wwnn must be provided, but not both.")
                 return False
             mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
@@ -207,7 +183,7 @@ class CharmStorageConnectorCharm(CharmBase):
         else:
             self.unit.status = BlockedStatus("Missing or incorrect storage type")
             return False
-        
+
         missing_config = []
         for config in mandatory_config:
             if charm_config.get(config) is None:
@@ -233,6 +209,18 @@ class CharmStorageConnectorCharm(CharmBase):
         else:
             logging.debug("Deferring %s notice count of %d", handle, notice_count)
             event.defer()
+
+    def _create_directories(self):
+        self.MULTIPATH_CONF_DIR.mkdir(
+            exist_ok=True,
+            mode=0o750)
+        self.MULTIPATH_CONF_PATH.mkdir(
+            exist_ok=True,
+            mode=0o750)
+        if self._stored.storage_type == 'iscsi':
+            self.ISCSI_CONF_PATH.mkdir(
+                exist_ok=True,
+                mode=0o750)
 
     def _iscsi_initiator(self, tenv, charm_config):
         initiator_name = None
@@ -282,7 +270,7 @@ class CharmStorageConnectorCharm(CharmBase):
             ctxt['conf_devices'] = conf_devices
         if multipath_blacklist:
             conf_blacklist = json.loads(multipath_blacklist)
-            ctxt['blacklist'] = conf_blacklist
+            ctxt['conf_blacklist'] = conf_blacklist
         template = tenv.get_template('multipath.conf.j2')
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
@@ -310,7 +298,7 @@ class CharmStorageConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'Iscsi login failed against target'
             )
-    
+
     def _fc_scan_host(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/fc_host').split('\n')
         number_hba_adapters = len(hba_adapters)
@@ -324,12 +312,28 @@ class CharmStorageConnectorCharm(CharmBase):
             except subprocess.CalledProcessError:
                 logging.exception('An error occured during the scan of the hosts.')
                 self.unit.status = BlockedStatus(
-                'Scan of the HBA adapters failed on the host.'
-            )
+                    'Scan of the HBA adapters failed on the host.'
+                )
 
-    def create_partition_for_alias(self):
+    def _retrieve_multipath_status(self):
+        result = subprocess.getoutput(['multipath', '-ll'])
+        logging.info('Retrive multipath status')
+        logging.info(result)
+
+    def _create_partition_for_alias(self):
         print('tbc')
 
+    def check_if_container(self):
+        """Check if the charm is being deployed on a container host."""
+        if utils.is_container():
+            self.unit.status = BlockedStatus(
+                'This charm is not supported on containers.'
+            )
+            logging.debug(
+                'This charm is not supported on containers. Stopping execution.'
+            )
+            return True
+        return False
 
 
 if __name__ == "__main__":
