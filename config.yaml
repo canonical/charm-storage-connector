@@ -57,13 +57,28 @@ options:
             In multipath.conf, add a device specific configuration. String should be of json dictionary format. 
             Example: 
                 value : '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_grouping_policy":"group_by_prio"}'
-                will produce this configuration:
+                Which will produce this configuration:
                 device {
                     vendor "PURE"
                     product "FlashArray"
                     fast_io_fail_tmo 10
                     path_grouping_policy "group_by_prio"
                 }
+    multipath-blacklist:
+        type: string
+        default: 
+        description: |
+            In multipath.conf, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
+            to blacklist by vendor/product, bu devnode or WWID. String should be of json disctionary format.
+            Example:
+                value: {"vendor": "QEMU", "product": "*"}
+                Which will produce this configuration:
+                blacklist {
+                    device {
+                        vendor "QEMU"
+                        product "*"
+                    }
+                } 
     iscsi-node-session-auth-authmethod:
         type: string
         default:

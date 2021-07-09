@@ -31,6 +31,12 @@ defaults {
     delay_watch_checks 12
     delay_wait_checks 12
 }
+{% if conf_blacklist -%}
+blacklist {
+    {% for key, value in conf_blacklist.items() %} {{ key }} {{ value }}
+    {% endfor %}
+}
+{% endif -%}
 devices {
     {% if conf_devices -%}
     device {

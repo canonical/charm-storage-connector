@@ -28,6 +28,7 @@ class CharmStorageConnectorCharm(CharmBase):
 
     _stored = StoredState()
     PACKAGES = ['multipath-tools']
+    # FC_PACKAGES = ['sysfsutils']
 
     ISCSI_CONF_PATH = Path('/etc/iscsi')
     ISCSI_CONF = ISCSI_CONF_PATH / 'iscsid.conf'
@@ -275,9 +276,13 @@ class CharmStorageConnectorCharm(CharmBase):
     def _multipath_configuration(self, tenv, charm_config):
         ctxt = {}
         multipath_conf_devices = charm_config.get('multipath-conf-devices')
+        multipath_blacklist = charm_config.get('multipath-blacklist')
         if multipath_conf_devices:
             conf_devices = json.loads(multipath_conf_devices)
             ctxt['conf_devices'] = conf_devices
+        if multipath_blacklist:
+            conf_blacklist = json.loads(multipath_blacklist)
+            ctxt['blacklist'] = conf_blacklist
         template = tenv.get_template('multipath.conf.j2')
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
@@ -305,6 +310,26 @@ class CharmStorageConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'Iscsi login failed against target'
             )
+    
+    def _fc_scan_host(self):
+        hba_adapters = subprocess.getoutput('ls /sys/class/fc_host').split('\n')
+        number_hba_adapters = len(hba_adapters)
+        for adapter in hba_adapters:
+            try:
+                logging.info('Running scan of the host to discover LUN devices.')
+                subprocess.check_call(['echo', '"1"', '>',
+                                       '/sys/class/fc_host/' + adapter + '/issue_lip'])
+                subprocess.check_call(['echo', '"- - -"', '>',
+                                       '/sys/class/scsi_host/' + adapter + '/scan'])
+            except subprocess.CalledProcessError:
+                logging.exception('An error occured during the scan of the hosts.')
+                self.unit.status = BlockedStatus(
+                'Scan of the HBA adapters failed on the host.'
+            )
+
+    def create_partition_for_alias(self):
+        print('tbc')
+
 
 
 if __name__ == "__main__":
