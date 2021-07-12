@@ -9,7 +9,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, create_autospec, patch
 
-from charm import CharmStorageConnectorCharm
+from charm import StorageConnectorCharm
 
 from ops.framework import EventBase
 from ops.testing import Harness
@@ -26,7 +26,7 @@ class TestCharm(unittest.TestCase):
     def setUp(self):
         """Test setup."""
         self.tempdir = tempfile.mkdtemp()
-        self.harness = Harness(CharmStorageConnectorCharm)
+        self.harness = Harness(StorageConnectorCharm)
         self.harness.set_leader(is_leader=True)
         self.harness.begin()
 
@@ -42,15 +42,15 @@ class TestCharm(unittest.TestCase):
         charm.utils.is_container = Mock(return_value=True)
         self.assertFalse(self.harness.charm._stored.installed)
 
-    @patch("charm.CharmStorageConnectorCharm._iscsi_initiator")
+    @patch("charm.StorageConnectorCharm._iscsi_initiator")
     @patch("charm.utils.is_container")
-    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF")
-    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF_PATH")
-    @patch("charm.CharmStorageConnectorCharm.MULTIPATH_CONF_DIR")
-    @patch("charm.CharmStorageConnectorCharm.ISCSI_INITIATOR_NAME")
-    @patch("charm.CharmStorageConnectorCharm.ISCSI_CONF")
-    @patch("charm.CharmStorageConnectorCharm.ISCSI_CONF_PATH")
-    def test_on_install(self, iscsi_conf_path, iscsi_conf, iscsi_initiator_name,
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF")
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_PATH")
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_DIR")
+    @patch("charm.StorageConnectorCharm.ISCSI_INITIATOR_NAME")
+    @patch("charm.StorageConnectorCharm.ISCSI_CONF")
+    @patch("charm.StorageConnectorCharm.ISCSI_CONF_PATH")
+    def test_on_default_install(self, iscsi_conf_path, iscsi_conf, iscsi_initiator_name,
                         multipath_conf_dir, multipath_conf_path, multipath_conf,
                         is_container, iscsi_initiator):
         """Test installation."""
@@ -67,6 +67,27 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.install.emit()
 
         self.assertTrue(os.path.exists(self.harness.charm.ISCSI_CONF))
+        self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
+        self.assertTrue(self.harness.charm._stored.installed)
+
+    # @patch("charm.StorageConnectorCharm.config")
+    @patch("charm.utils.is_container")
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF")
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_PATH")
+    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_DIR")
+    def test_on_fiberchannel_install(self, multipath_conf_dir, multipath_conf_path, multipath_conf, is_container):#, config):
+        """Test installation."""
+        is_container.return_value = False
+        multipath_conf_dir.return_value = Path(tempfile.mkdtemp())
+        multipath_conf_path.return_value = multipath_conf_dir / 'conf.d'
+        multipath_conf.return_value = multipath_conf_path / 'multipath.conf'
+        self.harness.charm._stored.storage_type = 'fc'
+        
+        # config.return_value = {"mutlipath-blacklist": {"test": 1}}
+        self.assertFalse(self.harness.charm._stored.installed)
+        self.harness.charm.on.install.emit()
+
+        self.assertFalse(os.path.exists(self.harness.charm.ISCSI_CONF))
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
         self.assertTrue(self.harness.charm._stored.installed)
 

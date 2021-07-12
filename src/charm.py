@@ -23,7 +23,7 @@ import utils
 logger = logging.getLogger(__name__)
 
 
-class CharmStorageConnectorCharm(CharmBase):
+class StorageConnectorCharm(CharmBase):
     """Class representing this Operator charm."""
 
     _stored = StoredState()
@@ -339,4 +339,4 @@ class CharmStorageConnectorCharm(CharmBase):
 
 
 if __name__ == "__main__":
-    main(CharmStorageConnectorCharm)
+    main(StorageConnectorCharm)
