@@ -1,4 +1,4 @@
-charm_name: iscsi-connector
+charm_name: storage-connector
 
 smoke_bundles:
     - focal

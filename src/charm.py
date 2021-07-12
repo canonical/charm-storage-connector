@@ -60,7 +60,9 @@ class CharmStorageConnectorCharm(CharmBase):
         self._stored.set_default(configured=False)
         self._stored.set_default(started=False)
         # -- base values --
-        self._stored.set_default(storage_type=self.charm_config.get('storage-type').lower())
+        self._stored.set_default(
+            storage_type=self.framework.model.config.get('storage-type').lower()
+        )
 
     def on_install(self, event):
         """Handle install state."""
@@ -301,7 +303,7 @@ class CharmStorageConnectorCharm(CharmBase):
 
     def _fc_scan_host(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/fc_host').split('\n')
-        number_hba_adapters = len(hba_adapters)
+        # number_hba_adapters = len(hba_adapters)
         for adapter in hba_adapters:
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
