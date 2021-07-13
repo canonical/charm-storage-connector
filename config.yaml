@@ -3,7 +3,7 @@ options:
         type: string
         default: iscsi
         description: 'Type of storage connection. Can either be "iscsi" or "fc" for fibre channel.'
-    fc-wwnn:
+    fc-wwid:
         type: string
         default:
         description: |
@@ -50,7 +50,20 @@ options:
             randomly. Format : 
             '{"hostname1": "iqn.yyyy-mm.naming-authority:uniquename1",
               "hostname2": "iqn.yyyy-mm.naming-authority:uniquename2}'
-    multipath-conf-devices:
+    multipath-defaults:
+        type: string
+        default: "{user_friendly_names: yes}"
+        description: |
+            In multipath.conf, sets the defaults configuration. String should be of json dictionary format. 
+            Example: 
+                value : '{user_friendly_names:yes, find_multipaths:yes, polling_interval:10}'
+                Which will produce this configuration:
+                defaults { 
+                    user_friendly_names yes 
+                    find_multipaths yes 
+                    polling_interval 10
+                }                       
+    multipath-devices:
         type: string
         default:
         description: |
@@ -69,7 +82,7 @@ options:
         default: 
         description: |
             In multipath.conf, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
-            to blacklist by vendor/product, bu devnode or WWID. String should be of json disctionary format.
+            to blacklist by vendor/product, bu devnode or WWID. String should be of json dictionary format.
             Example:
                 value: {"vendor": "QEMU", "product": "*"}
                 Which will produce this configuration:
@@ -78,7 +91,21 @@ options:
                         vendor "QEMU"
                         product "*"
                     }
-                } 
+                }
+    multipath-multipaths:
+        type: string
+        default:
+        description: |
+            In multipath.conf, add a multipaths section, and a multipath subsection. String should be of json dictionary format.
+            Example:
+                value: {wwid: "3624a9370da36a876e11946730001415e", alias: data1} 
+                Which will produce this configuration in multipath.conf :
+                multipaths { 
+                    multipath { 
+                        wwid "3624a9370da36a876e11946730001415e" 
+                        alias data1 
+                    }
+                }
     iscsi-node-session-auth-authmethod:
         type: string
         default:

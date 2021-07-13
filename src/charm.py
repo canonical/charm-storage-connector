@@ -265,14 +265,12 @@ class StorageConnectorCharm(CharmBase):
 
     def _multipath_configuration(self, tenv, charm_config):
         ctxt = {}
-        multipath_conf_devices = charm_config.get('multipath-conf-devices')
-        multipath_blacklist = charm_config.get('multipath-blacklist')
-        if multipath_conf_devices:
-            conf_devices = json.loads(multipath_conf_devices)
-            ctxt['conf_devices'] = conf_devices
-        if multipath_blacklist:
-            conf_blacklist = json.loads(multipath_blacklist)
-            ctxt['conf_blacklist'] = conf_blacklist
+        multipath_sections = ['defaults', 'devices', 'blacklist', 'multipaths']
+        for section in multipath_sections:
+            config = charm_config.get('multipath-' + section)
+            if config:
+                ctxt[section] = json.loads(config)
+        
         template = tenv.get_template('multipath.conf.j2')
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
@@ -307,8 +305,9 @@ class StorageConnectorCharm(CharmBase):
         for adapter in hba_adapters:
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
-                subprocess.check_call(['echo', '"1"', '>',
-                                       '/sys/class/fc_host/' + adapter + '/issue_lip'])
+                # subprocess.check_call(['echo', '"1"', '>',
+                #                        '/sys/class/fc_host/' + adapter + '/issue_lip'])
+                # barnabas only scans the scsi_host
                 subprocess.check_call(['echo', '"- - -"', '>',
                                        '/sys/class/scsi_host/' + adapter + '/scan'])
             except subprocess.CalledProcessError:
