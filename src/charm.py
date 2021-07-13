@@ -7,6 +7,7 @@ import logging
 import socket
 import subprocess
 from pathlib import Path
+import re
 
 import apt
 
@@ -40,8 +41,8 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    ISCSI_MANDATORY_CONFIG = ['target', 'port']
-    FC_MANDATORY_CONFIG = ['fc-lun-names']
+    ISCSI_MANDATORY_CONFIG = ['target', 'port', 'multipath-devices']
+    FC_MANDATORY_CONFIG = ['fc-lun-alias', 'multipath-devices']
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -171,14 +172,6 @@ class StorageConnectorCharm(CharmBase):
     def _check_mandatory_config(self):
         charm_config = self.framework.model.config
         if self._stored.storage_type == "fc":
-            if charm_config.get('fc-wwnn') and not charm_config.get('fc-wwpn'):
-                self.FC_MANDATORY_CONFIG.append('fc-wwnn')
-            elif not charm_config.get('fc-wwnn') and charm_config.get('fc-wwpn'):
-                self.FC_MANDATORY_CONFIG.append('fc-wwpn')
-            else:
-                self.unit.status = BlockedStatus("For FC storage type, either fc-wwpn \
-                                   or fc-wwnn must be provided, but not both.")
-                return False
             mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
             mandatory_config = self.ISCSI_MANDATORY_CONFIG
@@ -265,12 +258,18 @@ class StorageConnectorCharm(CharmBase):
 
     def _multipath_configuration(self, tenv, charm_config):
         ctxt = {}
-        multipath_sections = ['defaults', 'devices', 'blacklist', 'multipaths']
+        multipath_sections = ['defaults', 'devices', 'blacklist']
         for section in multipath_sections:
             config = charm_config.get('multipath-' + section)
             if config:
                 ctxt[section] = json.loads(config)
-        
+
+        logging.info("Gather information for the multipaths section")
+        wwid = self._retrieve_multipath_wwid()
+        alias = charm_config.get('fc-lun-alias')
+        ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
+
+        logging.debug('Rendering multipath json template')
         template = tenv.get_template('multipath.conf.j2')
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
@@ -305,9 +304,6 @@ class StorageConnectorCharm(CharmBase):
         for adapter in hba_adapters:
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
-                # subprocess.check_call(['echo', '"1"', '>',
-                #                        '/sys/class/fc_host/' + adapter + '/issue_lip'])
-                # barnabas only scans the scsi_host
                 subprocess.check_call(['echo', '"- - -"', '>',
                                        '/sys/class/scsi_host/' + adapter + '/scan'])
             except subprocess.CalledProcessError:
@@ -316,10 +312,12 @@ class StorageConnectorCharm(CharmBase):
                     'Scan of the HBA adapters failed on the host.'
                 )
 
-    def _retrieve_multipath_status(self):
-        result = subprocess.getoutput(['multipath', '-ll'])
-        logging.info('Retrive multipath status')
-        logging.info(result)
+    def _retrieve_multipath_wwid(self):
+        logging.info('Retrive device WWID via multipath -ll')
+        result = subprocess.getoutput(['multipath', '-ll']).split('\n')
+        wwid = re.findall(r'\(([\d\w]+)\)', result[0])
+        logging.info("WWID is {}".format(wwid))
+        return wwid
 
     def _create_partition_for_alias(self):
         print('tbc')

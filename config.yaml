@@ -3,26 +3,11 @@ options:
         type: string
         default: iscsi
         description: 'Type of storage connection. Can either be "iscsi" or "fc" for fibre channel.'
-    fc-wwid:
+    fc-lun-alias:
         type: string
-        default:
+        default: data1
         description: |
-            Fibre Channel World Wide Node Name. This option is to be used if all ports on each storage
-            server share a single WWNN. If not, use the fc-wwpn option. Must be formatted into a dictionary, 
-            where the key is the node hostname and the value is the wwnn.
-    fc-wwpn:
-        type: string
-        default:
-        description: |
-            Fibre Channel World Wide Port Name for each FC port. This option is to be used if all ports 
-            on each storage server have a unique identifier. Must be formatted into a dictionary, 
-            where the key is the node hostname and the value is an array of the wwpn for this server.
-    fc-lun-names:
-        type: string
-        default:
-        description: |
-            Fibre Channel LUN names. Must be formatted into a dictionary, where the key is the node hostname 
-            and the value is the LUN attached to it.'
+            LUN alias to give to the wwid for the mapping of the device. It is used in the path of the new mounted device, i.e /dev/mapper/<FC-LUN-ALIAS>. 
     iscsi-target:
         type: string
         default:
@@ -90,20 +75,6 @@ options:
                     device {
                         vendor "QEMU"
                         product "*"
-                    }
-                }
-    multipath-multipaths:
-        type: string
-        default:
-        description: |
-            In multipath.conf, add a multipaths section, and a multipath subsection. String should be of json dictionary format.
-            Example:
-                value: {wwid: "3624a9370da36a876e11946730001415e", alias: data1} 
-                Which will produce this configuration in multipath.conf :
-                multipaths { 
-                    multipath { 
-                        wwid "3624a9370da36a876e11946730001415e" 
-                        alias data1 
                     }
                 }
     iscsi-node-session-auth-authmethod:
