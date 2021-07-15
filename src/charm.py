@@ -36,7 +36,7 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
     MULTIPATH_CONF_DIR = Path('/etc/multipath')
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
-    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'multipath.conf'
+    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'storage-connector.multipath.conf'
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
@@ -64,6 +64,7 @@ class StorageConnectorCharm(CharmBase):
         self._stored.set_default(
             storage_type=self.framework.model.config.get('storage-type').lower()
         )
+        self._stored.set_default(fc_scan_ran_once=False)
 
     def on_install(self, event):
         """Handle install state."""
@@ -104,6 +105,9 @@ class StorageConnectorCharm(CharmBase):
 
         if not self._check_mandatory_config():
             return
+        
+        if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
+            self._fc_scan_host()
 
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self._create_directories()
@@ -265,9 +269,11 @@ class StorageConnectorCharm(CharmBase):
                 ctxt[section] = json.loads(config)
 
         logging.info("Gather information for the multipaths section")
-        wwid = self._retrieve_multipath_wwid()
-        alias = charm_config.get('fc-lun-alias')
-        ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
+
+        if self._stored.storage_type == 'fc':
+            wwid = self._retrieve_multipath_wwid()
+            alias = charm_config.get('fc-lun-alias')
+            ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
 
         logging.debug('Rendering multipath json template')
         template = tenv.get_template('multipath.conf.j2')
@@ -311,6 +317,8 @@ class StorageConnectorCharm(CharmBase):
                 self.unit.status = BlockedStatus(
                     'Scan of the HBA adapters failed on the host.'
                 )
+                return
+        self._stored.fc_scan_ran_once =True
 
     def _retrieve_multipath_wwid(self):
         logging.info('Retrive device WWID via multipath -ll')
@@ -320,7 +328,11 @@ class StorageConnectorCharm(CharmBase):
         return wwid
 
     def _create_partition_for_alias(self):
-        print('tbc')
+        FC_STORAGE_MOUNT_PATH = "/var/lib/test"
+        # Couldn't that be handled by maas post-deploy ? 
+        # Once the disk is available in fdisk, either maas or ceph 
+        # should take care of mounting and partitioning the disk 
+        # i.e osd-devices for ceph-osd charm would be /dev/mapper/<alias>
 
     def check_if_container(self):
         """Check if the charm is being deployed on a container host."""
