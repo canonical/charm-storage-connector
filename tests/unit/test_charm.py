@@ -83,7 +83,6 @@ class TestCharm(unittest.TestCase):
         multipath_conf.return_value = multipath_conf_path / 'multipath.conf'
         self.harness.charm._stored.storage_type = 'fc'
         
-        # config.return_value = {"mutlipath-blacklist": {"test": 1}}
         self.assertFalse(self.harness.charm._stored.installed)
         self.harness.charm.on.install.emit()
 
