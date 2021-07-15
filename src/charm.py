@@ -36,7 +36,7 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
     MULTIPATH_CONF_DIR = Path('/etc/multipath')
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
-    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'storage-connector.multipath.conf'
+    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'storage-connector-multipath.conf'
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'

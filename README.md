@@ -2,22 +2,31 @@
 
 ## Overview
 
-This charm configures a unit to connect to an iscsi endpoint. It acts as a subordinate
-charm, which can be deployed on any baremetal or virtual machine, alongside a main
-charm. It is not supported in containers. 
+This charm configures a unit to connect to a storage endpoint, either ISCSI or Fibre Channel. 
+It acts as a subordinate charm, which can be deployed on any baremetal or virtual machine, 
+alongside a main charm. It is not supported in containers. 
 
-This charm will:
+If you configure this charm for ISCSI, it will:
 - Generate an iscsi initiator name and put it in /etc/iscsi/initiatorname.iscsi
 - Install the package multipath-tools
-- Configure /etc/multipath.conf for the correct array
+- Configure /etc/multipath/storage-connector-multipath.conf for the correct array
 - Restart the services iscsid, open-iscsi
 - Perform an iscsi discovery against a target
 - Login to the target
-- Restart the service multipathd
+- Reload and restart the service multipathd
 
-The user can input a initiator name dictionary in config.yaml if he wishes to use a
+If you configure it for Fibre Channel, it will:
+- Install the package multipath-tools
+- Scan the host for HBA adapters
+- Retrieve the WWID for the Fibre Channel connection
+- Configure /etc/multipath/storage-connector-multipath.conf
+- Reload and restart multipathd.service
+
+If ISCSI, the user can input a initiator name dictionary in config.yaml if he wishes to use a
 specific iqn for a specific unit. Also, the target IP and port are needed to perform
 the discovery and login with iscsiadm. 
+
+For Fibre Channel, the user can choose the device alias to be used when mapping the disk.
 
 
 ## Quickstart
@@ -27,20 +36,20 @@ To build the charm, use the Make actions. These actions use the charmcraft tool,
 snap install charmcraft
 make build
 ```
-This will create the `iscsi-connector.charm` file and place it in the `.build` directory.
+This will create the `storage-connector.charm` file and place it in the `.build` directory.
 
-To deploy this subordinate charm on a ubuntu unit, deploy `cs:ubuntu` first.
+To deploy this subordinate charm with ISCSI on a ubuntu unit, deploy `cs:ubuntu` first.
 ```
 juju add-model my-test-model
 juju deploy cs:ubuntu --series bionic
-juju deploy cs:iscsi-connector
-juju relate ubuntu iscsi-connector
+juju deploy cs:storage-connector
+juju relate ubuntu storage-connector
 ```
 
 To edit the config of the target or the port:
 ```
-juju config iscsi-connector target=<TARGET_IP> 
-juju config iscsi-connector port=<PORT>
+juju config storage-connector iscsi-target=<TARGET_IP> 
+juju config storage-connector iscsi-port=<PORT>
 ```
 
 To restart services manually, two actions exist:
@@ -51,7 +60,8 @@ juju run-action --unit ubuntu/0 reload-multipathd-service
 
 ## Scaling
 
-This charm will scale with the units it is related to. For example, if you scale the ubuntu application, and that the iscsi-connector is related to it, it will be deployed on each ubuntu units. 
+This charm will scale with the units it is related to. For example, if you scale the 
+ubuntu application, and that the iscsi-connector is related to it, it will be deployed on each ubuntu units. 
 ```
 juju add-unit ubuntu
 juju remove-unit ubuntu/1
