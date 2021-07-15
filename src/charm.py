@@ -115,7 +115,6 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.framework.model.config
         tenv = Environment(loader=FileSystemLoader('templates'))
 
-        self._multipath_configuration(tenv, charm_config)
         if self._stored.storage_type == 'iscsi':
             self._iscsi_initiator(tenv, charm_config)
             self._iscsid_configuration(tenv, charm_config)
@@ -132,6 +131,7 @@ class StorageConnectorCharm(CharmBase):
                 self._iscsiadm_discovery(charm_config)
                 self._iscsiadm_login()
 
+        self._multipath_configuration(tenv, charm_config)
         logging.info('Reloading multipathd service')
         try:
             subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
