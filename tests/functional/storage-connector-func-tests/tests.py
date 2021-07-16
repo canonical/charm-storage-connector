@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Encapsulate iscsi-connector testing."""
+"""Encapsulate storage-connector testing."""
 
 import json
 import logging
@@ -22,7 +22,7 @@ import zaza.openstack.charm_tests.test_utils as test_utils
 
 
 class StorageConnectorTest(test_utils.BaseCharmTest):
-    """Class for iscsi-connector tests."""
+    """Class for storage-connector tests."""
 
     @classmethod
     def setUpClass(cls):

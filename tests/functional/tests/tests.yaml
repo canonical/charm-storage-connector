@@ -8,13 +8,13 @@ gate_bundles:
     - focal
 
 configure:
- - iscsi-connector-func-tests.setup.basic_target_setup
- - iscsi-connector-func-tests.setup.configure_iscsi_target
+ - storage-connector-func-tests.setup.basic_target_setup
+ - storage-connector-func-tests.setup.configure_iscsi_target
 
 tests:
- - iscsi-connector-func-tests.tests.StorageConnectorTest
+ - storage-connector-func-tests.tests.StorageConnectorTest
 
 target_deploy_status:
-  iscsi-connector:
+  storage-connector:
     workload-status: blocked
     workload-status-message: "Missing"

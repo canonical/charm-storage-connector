@@ -80,15 +80,17 @@ class TestCharm(unittest.TestCase):
         is_container.return_value = False
         multipath_conf_dir.return_value = Path(tempfile.mkdtemp())
         multipath_conf_path.return_value = multipath_conf_dir / 'conf.d'
-        multipath_conf.return_value = multipath_conf_path / 'multipath.conf'
+        multipath_conf.return_value = multipath_conf_path / 'storage-connector-multipath.conf'
         self.harness.charm._stored.storage_type = 'fc'
         
         self.assertFalse(self.harness.charm._stored.installed)
         self.harness.charm.on.install.emit()
-
+        print(self.harness.charm.MULTIPATH_CONF)
         self.assertFalse(os.path.exists(self.harness.charm.ISCSI_CONF))
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
         self.assertTrue(self.harness.charm._stored.installed)
+
+    #TODO : add a test that validates content of the multipath config file
 
     def test_on_start(self):
         """Test on start hook."""

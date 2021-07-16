@@ -61,7 +61,7 @@ juju run-action --unit ubuntu/0 reload-multipathd-service
 ## Scaling
 
 This charm will scale with the units it is related to. For example, if you scale the 
-ubuntu application, and that the iscsi-connector is related to it, it will be deployed on each ubuntu units. 
+ubuntu application, and that the storage-connector is related to it, it will be deployed on each ubuntu units. 
 ```
 juju add-unit ubuntu
 juju remove-unit ubuntu/1
@@ -77,5 +77,5 @@ cause of the error.
 ## Contact
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
  - Maintainers: BootStack Charmers <bootstack-charmers@lists.canonical.com>
- - Bug Tracker: [here](https://bugs.launchpad.net/charm-iscsi-connector)
+ - Bug Tracker: [here](https://bugs.launchpad.net/charm-storage-connector)
  
