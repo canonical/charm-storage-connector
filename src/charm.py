@@ -4,10 +4,11 @@
 
 import json
 import logging
+import re
 import socket
 import subprocess
 from pathlib import Path
-import re
+
 
 import apt
 
@@ -105,7 +106,7 @@ class StorageConnectorCharm(CharmBase):
 
         if not self._check_mandatory_config():
             return
-        
+
         if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
             self._fc_scan_host()
 
@@ -118,13 +119,7 @@ class StorageConnectorCharm(CharmBase):
         if self._stored.storage_type == 'iscsi':
             self._iscsi_initiator(tenv, charm_config)
             self._iscsid_configuration(tenv, charm_config)
-            logging.info('Restarting iscsi services')
-            for service in self.ISCSI_SERVICES:
-                try:
-                    logging.info('Restarting %s service', service)
-                    subprocess.check_call(['systemctl', 'restart', service])
-                except subprocess.CalledProcessError:
-                    logging.exception('An error occured while restarting %s.', service)
+            self._restart_iscsi_services()
 
             if charm_config.get('discovery-and-login'):
                 logging.info('Launching iscsiadm discovery and login')
@@ -162,9 +157,8 @@ class StorageConnectorCharm(CharmBase):
     def on_restart_iscsi_services_action(self, event):
         """Restart iscsid and open-iscsi services."""
         event.log('Restarting iscsi services')
-        for service in self.ISCSI_SERVICES:
-            subprocess.check_call(['systemctl', 'restart', service])
-            event.set_results({"success": "True"})
+        self._restart_iscsi_services()
+        event.set_results({"success": "True"})
 
     def on_reload_multipathd_service_action(self, event):
         """Reload multipathd service."""
@@ -173,6 +167,15 @@ class StorageConnectorCharm(CharmBase):
         event.set_results({"success": "True"})
 
     # Additional functions
+    def _restart_iscsi_services(self):
+        """Restart iscsid and open-iscsi services."""
+        for service in self.ISCSI_SERVICES:
+            logging.info('Restarting %s service', service)
+            try:
+                subprocess.check_call(['systemctl', 'restart', service])
+            except subprocess.CalledProcessError:
+                logging.exception('An error occured while restarting %s.', service)
+
     def _check_mandatory_config(self):
         charm_config = self.framework.model.config
         if self._stored.storage_type == "fc":
@@ -318,7 +321,7 @@ class StorageConnectorCharm(CharmBase):
                     'Scan of the HBA adapters failed on the host.'
                 )
                 return
-        self._stored.fc_scan_ran_once =True
+        self._stored.fc_scan_ran_once = True
 
     def _retrieve_multipath_wwid(self):
         logging.info('Retrive device WWID via multipath -ll')
@@ -327,11 +330,11 @@ class StorageConnectorCharm(CharmBase):
         logging.info("WWID is {}".format(wwid))
         return wwid
 
-    def _create_partition_for_alias(self):
-        FC_STORAGE_MOUNT_PATH = "/var/lib/test"
-        # Couldn't that be handled by maas post-deploy ? 
-        # Once the disk is available in fdisk, either maas or ceph 
-        # should take care of mounting and partitioning the disk 
+    # def _create_partition_for_alias(self):
+    #     FC_STORAGE_MOUNT_PATH = "/var/lib/test"
+        # Couldn't that be handled by maas post-deploy ?
+        # Once the disk is available in fdisk, either maas or ceph
+        # should take care of mounting and partitioning the disk
         # i.e osd-devices for ceph-osd charm would be /dev/mapper/<alias>
 
     def check_if_container(self):

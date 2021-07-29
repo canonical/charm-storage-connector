@@ -51,8 +51,8 @@ class TestCharm(unittest.TestCase):
     @patch("charm.StorageConnectorCharm.ISCSI_CONF")
     @patch("charm.StorageConnectorCharm.ISCSI_CONF_PATH")
     def test_on_default_install(self, iscsi_conf_path, iscsi_conf, iscsi_initiator_name,
-                        multipath_conf_dir, multipath_conf_path, multipath_conf,
-                        is_container, iscsi_initiator):
+                                multipath_conf_dir, multipath_conf_path, multipath_conf,
+                                is_container, iscsi_initiator):
         """Test installation."""
         is_container.return_value = False
         iscsi_conf_path.return_value = Path(tempfile.mkdtemp())
@@ -70,19 +70,20 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
         self.assertTrue(self.harness.charm._stored.installed)
 
-    # @patch("charm.StorageConnectorCharm.config")
     @patch("charm.utils.is_container")
     @patch("charm.StorageConnectorCharm.MULTIPATH_CONF")
     @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_PATH")
     @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_DIR")
-    def test_on_fiberchannel_install(self, multipath_conf_dir, multipath_conf_path, multipath_conf, is_container):#, config):
+    def test_on_fiberchannel_install(self, multipath_conf_dir,
+                                     multipath_conf_path, multipath_conf, is_container):
         """Test installation."""
         is_container.return_value = False
         multipath_conf_dir.return_value = Path(tempfile.mkdtemp())
         multipath_conf_path.return_value = multipath_conf_dir / 'conf.d'
-        multipath_conf.return_value = multipath_conf_path / 'storage-connector-multipath.conf'
+        file_name = 'storage-connector-multipath.conf'
+        multipath_conf.return_value = multipath_conf_path / file_name
         self.harness.charm._stored.storage_type = 'fc'
-        
+
         self.assertFalse(self.harness.charm._stored.installed)
         self.harness.charm.on.install.emit()
         print(self.harness.charm.MULTIPATH_CONF)
@@ -90,7 +91,7 @@ class TestCharm(unittest.TestCase):
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF))
         self.assertTrue(self.harness.charm._stored.installed)
 
-    #TODO : add a test that validates content of the multipath config file
+    # TODO : add a test that validates content of the multipath config file
 
     def test_on_start(self):
         """Test on start hook."""
