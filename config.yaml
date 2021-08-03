@@ -39,9 +39,10 @@ options:
         type: string
         default: "{user_friendly_names: yes}"
         description: |
-            In multipath.conf, sets the defaults configuration. String should be of json dictionary format. 
+            In multipath.conf, sets the defaults configuration. String should be of json dictionary format.
+            Double quotes are essential to the correct format of this json string.
             Example: 
-                value : '{user_friendly_names:yes, find_multipaths:yes, polling_interval:10}'
+                value : '{"user_friendly_names":"yes", "find_multipaths":"yes", "polling_interval":"10"}'
                 Which will produce this configuration:
                 defaults { 
                     user_friendly_names yes 
@@ -52,7 +53,8 @@ options:
         type: string
         default:
         description: |
-            In multipath.conf, add a device specific configuration. String should be of json dictionary format. 
+            In multipath.conf, add a device specific configuration. String should be of json dictionary format.
+            Double quotes are essential to the correct format of this json string.
             Example: 
                 value : '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_grouping_policy":"group_by_prio"}'
                 Which will produce this configuration:

@@ -5,11 +5,16 @@ applications:
     options:
       storage-type: 'fc'
       fc-lun-alias: 'data1'
-      multipath-defaults: '{user_friendly_names:yes, find_multipaths:yes, polling_interval:10}'
-      multipath-devices: '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_selector:"queue-length 0", "path_grouping_policy":"group_by_prio", "rr_min_io": "1", "path_checker": "tur", "fast_io_fail_tmo": "1", "dev_loss_tmo": "infinity", "no_path_retry": "5", "failback": "immediate", "prio": "alua", "hardware_handler": "1 alua", "max_sectors_kb": "4096"}'
+      multipath-defaults: '{"user_friendly_names":"yes", "find_multipaths":"yes", "polling_interval":"10"}'
+      multipath-devices: '{"vendor":"PURE", "product":"FlashArray", "fast_io_fail_tmo":"10", "path_selector":"queue-length 0", "path_grouping_policy":"group_by_prio", "rr_min_io":"1", "path_checker":"tur", "fast_io_fail_tmo":"1", "dev_loss_tmo":"infinity", "no_path_retry":"5", "failback":"immediate", "prio":"alua", "hardware_handler":"1 alua", "max_sectors_kb":"4096"}'
   ubuntu:
     charm: cs:ubuntu
     num_units: 1
+    to:
+    - 0
+machines:
+  "0":
+    constraints: tags=test-storage
 relations:
   - - 'ubuntu:juju-info'
     - 'storage-connector:host'

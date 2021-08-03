@@ -37,7 +37,8 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
     MULTIPATH_CONF_DIR = Path('/etc/multipath')
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
-    MULTIPATH_CONF = MULTIPATH_CONF_PATH / 'storage-connector-multipath.conf'
+    MULTIPATH_CONF_NAME = 'storage-connector-multipath.conf'
+    MULTIPATH_CONF = MULTIPATH_CONF_PATH / MULTIPATH_CONF_NAME
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
@@ -269,17 +270,20 @@ class StorageConnectorCharm(CharmBase):
         for section in multipath_sections:
             config = charm_config.get('multipath-' + section)
             if config:
-                ctxt[section] = json.loads(config)
+                try:
+                    ctxt[section] = json.loads(config)
+                except Exception as e:
+                    logging.info("An exception has occured. Please verify the format \
+                                 of the multipath config option. Traceback: %s", e)
 
         logging.info("Gather information for the multipaths section")
-
         if self._stored.storage_type == 'fc':
             wwid = self._retrieve_multipath_wwid()
             alias = charm_config.get('fc-lun-alias')
             ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
 
         logging.debug('Rendering multipath json template')
-        template = tenv.get_template('multipath.conf.j2')
+        template = tenv.get_template(self.MULTIPATH_CONF_NAME + '.j2')
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
         self.MULTIPATH_CONF.chmod(0o644)
@@ -325,10 +329,15 @@ class StorageConnectorCharm(CharmBase):
 
     def _retrieve_multipath_wwid(self):
         logging.info('Retrive device WWID via multipath -ll')
-        result = subprocess.getoutput(['multipath', '-ll']).split('\n')
+        result = subprocess.getoutput(['multipath -ll']).split('\n')
         wwid = re.findall(r'\(([\d\w]+)\)', result[0])
         logging.info("WWID is {}".format(wwid))
-        return wwid
+        if not wwid or wwid is None:
+            self.unit.status = BlockedStatus(
+                'WWID was not found. Debug needed.'
+            )
+        else:
+            return wwid[0]
 
     # def _create_partition_for_alias(self):
     #     FC_STORAGE_MOUNT_PATH = "/var/lib/test"

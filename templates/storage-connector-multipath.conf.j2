@@ -4,13 +4,13 @@
 # local changes will be overwritten.
 ###############################################################################
 defaults {
-    {% for key, value in defaults.items() %} {{ key }} {{ value }}
+    {% for key, value in defaults.items() %} {{ key }} "{{ value }}"
     {% endfor %}
 }
 {% if blacklist -%}
 blacklist {
     device {
-        {% for key, value in blacklist.items() %} {{ key }} {{ value }}
+        {% for key, value in blacklist.items() %} {{ key }} "{{ value }}"
         {% endfor %}
     }
 }
@@ -18,7 +18,7 @@ blacklist {
 {% if devices -%}
 devices {
     device {
-        {% for key, value in devices.items() %} {{ key }} {{ value }}
+        {% for key, value in devices.items() %} {{ key }} "{{ value }}"
         {% endfor %}
     }
 }
@@ -26,7 +26,7 @@ devices {
 {% if multipaths -%}
 multipaths {
     multipath {
-        {% for key, value in multipaths.items() %} {{ key }} {{ value }}
+        {% for key, value in multipaths.items() %} {{ key }} "{{ value }}"
         {% endfor %}
     }
 }
