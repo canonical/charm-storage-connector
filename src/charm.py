@@ -128,6 +128,9 @@ class StorageConnectorCharm(CharmBase):
                 self._iscsiadm_login()
 
         self._multipath_configuration(tenv, charm_config)
+        if not self._validate_multipath_config():
+            return
+
         logging.info('Reloading multipathd service')
         try:
             subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
@@ -287,6 +290,7 @@ class StorageConnectorCharm(CharmBase):
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
         self.MULTIPATH_CONF.chmod(0o644)
+        self._validate_multipath_config()
 
     def _iscsiadm_discovery(self, charm_config):
         target = charm_config.get('iscsi-target')
@@ -329,8 +333,8 @@ class StorageConnectorCharm(CharmBase):
 
     def _retrieve_multipath_wwid(self):
         logging.info('Retrive device WWID via multipath -ll')
-        result = subprocess.getoutput(['multipath -ll']).split('\n')
-        wwid = re.findall(r'\(([\d\w]+)\)', result[0])
+        result = subprocess.getoutput(['multipath -ll'])
+        wwid = re.findall(r'\(([\d\w]+)\)', result)
         logging.info("WWID is {}".format(wwid))
         if not wwid or wwid is None:
             self.unit.status = BlockedStatus(
@@ -339,12 +343,17 @@ class StorageConnectorCharm(CharmBase):
         else:
             return wwid[0]
 
-    # def _create_partition_for_alias(self):
-    #     FC_STORAGE_MOUNT_PATH = "/var/lib/test"
-        # Couldn't that be handled by maas post-deploy ?
-        # Once the disk is available in fdisk, either maas or ceph
-        # should take care of mounting and partitioning the disk
-        # i.e osd-devices for ceph-osd charm would be /dev/mapper/<alias>
+    def _validate_multipath_config(self):
+        result = subprocess.getoutput(['multipath -ll'])
+        error = re.findall(r'(invalid\skeyword:\s\w+)', result)
+        if error:
+            logging.info('Configuration is probably malformed. \
+                         See output below {}', result)
+            self.unit.status = BlockedStatus(
+                'Multipath conf error: {}', error
+            )
+            return False
+        return True
 
     def check_if_container(self):
         """Check if the charm is being deployed on a container host."""
