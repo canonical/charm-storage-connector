@@ -31,7 +31,7 @@ build:
     # `charmcraft build` currently does not work on ubuntu bionic (bug: https://github.com/canonical/charmcraft/issues/102)
 	@echo "Building charm to base directory ${CHARM_BUILD_DIR}"
 	@mkdir -p ${CHARM_BUILD_DIR}/
-	@tox -e build
+	@charmcraft build
 	@mv ${CHARM_NAME}.charm ${CHARM_BUILD_DIR}/.
 
 # bypassing bug https://github.com/canonical/charmcraft/issues/109
