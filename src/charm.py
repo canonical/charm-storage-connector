@@ -92,9 +92,6 @@ class StorageConnectorCharm(CharmBase):
                     subprocess.check_call(['systemctl', 'enable', service])
                 except subprocess.CalledProcessError:
                     logging.exception('Unable to enable %s.', service)
-        elif self._stored.storage_type == 'fc':
-            # TODO: is there any service to install for FC
-            print('to complete')
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
