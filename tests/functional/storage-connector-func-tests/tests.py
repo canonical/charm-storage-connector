@@ -38,8 +38,8 @@ class StorageConnectorTest(test_utils.BaseCharmTest):
         conf = {
             'storage-type': 'iscsi',
             'initiator-dictionary': initiator_dictionary,
-            'target': target_ip,
-            'port': '3260',
+            'iscsi-target': target_ip,
+            'iscsi-port': '3260',
             'iscsi-node-session-auth-authmethod': 'CHAP',
             'iscsi-node-session-auth-username': 'iscsi-user',
             'iscsi-node-session-auth-password': 'password123',

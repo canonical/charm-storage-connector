@@ -30,7 +30,6 @@ class StorageConnectorCharm(CharmBase):
 
     _stored = StoredState()
     PACKAGES = ['multipath-tools']
-    # FC_PACKAGES = ['sysfsutils']
 
     ISCSI_CONF_PATH = Path('/etc/iscsi')
     ISCSI_CONF = ISCSI_CONF_PATH / 'iscsid.conf'
@@ -119,12 +118,13 @@ class StorageConnectorCharm(CharmBase):
             self._iscsid_configuration(tenv, charm_config)
             self._restart_iscsi_services()
 
-            if charm_config.get('discovery-and-login'):
+            if charm_config.get('iscsi-discovery-and-login'):
                 logging.info('Launching iscsiadm discovery and login')
                 self._iscsiadm_discovery(charm_config)
                 self._iscsiadm_login()
 
-        self._multipath_configuration(tenv, charm_config)
+        if not self._multipath_configuration(tenv, charm_config):
+            return
         if not self._validate_multipath_config():
             return
 
@@ -270,13 +270,14 @@ class StorageConnectorCharm(CharmBase):
         for section in multipath_sections:
             config = charm_config.get('multipath-' + section)
             if config:
+                logging.info("Gather information for the multipaths section")
                 try:
                     ctxt[section] = json.loads(config)
                 except Exception as e:
                     logging.info("An exception has occured. Please verify the format \
-                                 of the multipath config option. Traceback: %s", e)
+                                 of the multipath config options. Traceback: %s", e)
+                    return False
 
-        logging.info("Gather information for the multipaths section")
         if self._stored.storage_type == 'fc':
             wwid = self._retrieve_multipath_wwid()
             alias = charm_config.get('fc-lun-alias')
@@ -287,7 +288,7 @@ class StorageConnectorCharm(CharmBase):
         rendered_content = template.render(ctxt)
         self.MULTIPATH_CONF.write_text(rendered_content)
         self.MULTIPATH_CONF.chmod(0o644)
-        self._validate_multipath_config()
+        return True
 
     def _iscsiadm_discovery(self, charm_config):
         target = charm_config.get('iscsi-target')

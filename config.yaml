@@ -20,8 +20,8 @@ options:
         type: boolean
         default: True
         description: |
-            If set to True (default) and that storage-type is iscsi, the charm will configure 
-            the iscsid.conf and multipathd.conf configuration files, and then run a iscsiadm 
+            If set to True (default) and storage-type is iscsi, the charm will configure 
+            the iscsid.conf and multipath.conf configuration files, and then run a iscsiadm 
             discovery and login against the target. If set to False, the charm will simply 
             configure the unit but not run the discovery and login against the target. 
     initiator-dictionary:
@@ -39,7 +39,7 @@ options:
         type: string
         default: "{user_friendly_names: yes}"
         description: |
-            In multipath.conf, sets the defaults configuration. String should be of json dictionary format.
+            In multipath config, sets the defaults configuration. String should be of json dictionary format.
             Double quotes are essential to the correct format of this json string.
             Example: 
                 value : '{"user_friendly_names":"yes", "find_multipaths":"yes", "polling_interval":"10"}'
@@ -53,7 +53,7 @@ options:
         type: string
         default:
         description: |
-            In multipath.conf, add a device specific configuration. String should be of json dictionary format.
+            In multipath config, add a device specific configuration. String should be of json dictionary format.
             Double quotes are essential to the correct format of this json string.
             Example: 
                 value : '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_grouping_policy":"group_by_prio"}'
@@ -68,8 +68,8 @@ options:
         type: string
         default: 
         description: |
-            In multipath.conf, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
-            to blacklist by vendor/product, bu devnode or WWID. String should be of json dictionary format.
+            In multipath config, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
+            to blacklist by vendor/product, by devnode or WWID. String should be of json dictionary format.
             Example:
                 value: {"vendor": "QEMU", "product": "*"}
                 Which will produce this configuration:
