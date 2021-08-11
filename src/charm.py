@@ -9,7 +9,6 @@ import socket
 import subprocess
 from pathlib import Path
 
-
 import apt
 
 from jinja2 import Environment, FileSystemLoader
@@ -42,8 +41,8 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    ISCSI_MANDATORY_CONFIG = ['target', 'port', 'multipath-devices']
-    FC_MANDATORY_CONFIG = ['fc-lun-alias', 'multipath-devices']
+    ISCSI_MANDATORY_CONFIG = ['storage-type', 'target', 'port', 'multipath-devices']
+    FC_MANDATORY_CONFIG = ['storage-type', 'fc-lun-alias', 'multipath-devices']
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -71,6 +70,9 @@ class StorageConnectorCharm(CharmBase):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
         if self.check_if_container():
+            return
+
+        if not self._check_mandatory_config():
             return
 
         # install packages
@@ -102,6 +104,10 @@ class StorageConnectorCharm(CharmBase):
             return
 
         if not self._check_mandatory_config():
+            return
+
+        if self._stored.storage_type != self.config("storage-type"):
+            self.unit.status = BlockedStatus("Storage type cannot be changed after deployment.")
             return
 
         if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
@@ -319,8 +325,9 @@ class StorageConnectorCharm(CharmBase):
         for adapter in hba_adapters:
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
-                subprocess.check_call(['echo', '"- - -"', '>',
-                                       '/sys/class/scsi_host/' + adapter + '/scan'])
+                # subprocess.check_call(['echo', '"- - -"', '>',
+                                    #    '/sys/class/scsi_host/' + adapter + '/scan'])
+                file_name = 'sys/class/scsi_host' + adapter + '/scan'
             except subprocess.CalledProcessError:
                 logging.exception('An error occured during the scan of the hosts.')
                 self.unit.status = BlockedStatus(
