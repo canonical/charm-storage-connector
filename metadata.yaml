@@ -1,14 +1,17 @@
 name: storage-connector
-summary: A charm that connects a node to an storage endpoint
+summary: A charm that connects a node to a storage endpoint
 maintainers:
     - Camille Rodriguez <camille.rodriguez@canonical.com>
 description: |
     The Storage Connector charm is an open-source charm that can be installed as a
-    subordinate to any VM or baremetal machine. It configures the node to connect 
-    to either a specific ISCSI or Fibre Channel target. 
+    subordinate to any VM or baremetal machine. It has two modes: iSCSI or Fibre Channel.
+    In the iSCSI mode, it will connect the host to an iSCSI target and configure multipath 
+    accordingly. For Fibre Channel, this charm detects the WWID of the FC LUNs and 
+    configures multipath accordingly for the device to be ready to be used.
 tags:
     - iscsi
     - fibrechannel
+    - fiberchannel
 subordinate: true
 series:
     - bionic
