@@ -35,8 +35,7 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_INITIATOR_NAME = ISCSI_CONF_PATH / 'initiatorname.iscsi'
     MULTIPATH_CONF_DIR = Path('/etc/multipath')
     MULTIPATH_CONF_PATH = MULTIPATH_CONF_DIR / 'conf.d'
-    MULTIPATH_CONF_NAME = 'storage-connector-multipath.conf'
-    MULTIPATH_CONF = MULTIPATH_CONF_PATH / MULTIPATH_CONF_NAME
+    MULTIPATH_CONF_TEMPLATE = 'storage-connector-multipath.conf.j2'
 
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
@@ -65,6 +64,8 @@ class StorageConnectorCharm(CharmBase):
             storage_type=self.framework.model.config.get('storage-type').lower()
         )
         self._stored.set_default(fc_scan_ran_once=False)
+        self._stored.multipath_conf_name = 'juju-' + self.app.name + '-multipath.conf'
+        self._stored.multipath_path = self.MULTIPATH_CONF_PATH / self._stored.multipath_conf_name
 
     def on_install(self, event):
         """Handle install state."""
@@ -290,10 +291,10 @@ class StorageConnectorCharm(CharmBase):
             ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
 
         logging.debug('Rendering multipath json template')
-        template = tenv.get_template(self.MULTIPATH_CONF_NAME + '.j2')
+        template = tenv.get_template(self.MULTIPATH_CONF_TEMPLATE)
         rendered_content = template.render(ctxt)
-        self.MULTIPATH_CONF.write_text(rendered_content)
-        self.MULTIPATH_CONF.chmod(0o644)
+        self._stored.multipath_path.write_text(rendered_content)
+        self._stored.multipath_path.chmod(0o644)
         return True
 
     def _iscsiadm_discovery(self, charm_config):
