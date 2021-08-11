@@ -106,10 +106,6 @@ class StorageConnectorCharm(CharmBase):
         if not self._check_mandatory_config():
             return
 
-        if self._stored.storage_type != self.config("storage-type"):
-            self.unit.status = BlockedStatus("Storage type cannot be changed after deployment.")
-            return
-
         if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
             self._fc_scan_host()
 
@@ -192,6 +188,10 @@ class StorageConnectorCharm(CharmBase):
         else:
             self.unit.status = BlockedStatus("Missing or incorrect storage type")
             return False
+
+        if self._stored.storage_type != self.config("storage-type"):
+            self.unit.status = BlockedStatus("Storage type cannot be changed after deployment.")
+            return
 
         missing_config = []
         for config in mandatory_config:
