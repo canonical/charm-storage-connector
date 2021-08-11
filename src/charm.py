@@ -56,16 +56,17 @@ class StorageConnectorCharm(CharmBase):
         self.framework.observe(self.on.reload_multipathd_service_action,
                                self.on_reload_multipathd_service_action)
         # -- initialize states --
-        self._stored.set_default(installed=False)
-        self._stored.set_default(configured=False)
-        self._stored.set_default(started=False)
-        # -- base values --
         self._stored.set_default(
-            storage_type=self.framework.model.config.get('storage-type').lower()
+            installed=False,
+            configured=False,
+            started=False,
+            fc_scan_ran_once=False,
+            storage_type=self.model.config.get('storage-type').lower(),
+            mp_conf_name = 'juju-' + self.app.name + '-multipath.conf'
         )
-        self._stored.set_default(fc_scan_ran_once=False)
-        self._stored.multipath_conf_name = 'juju-' + self.app.name + '-multipath.conf'
-        self._stored.multipath_path = self.MULTIPATH_CONF_PATH / self._stored.multipath_conf_name
+        self._stored.set_default(
+            mp_path = self.MULTIPATH_CONF_PATH / self._stored.mp_conf_name
+        )
 
     def on_install(self, event):
         """Handle install state."""
@@ -113,7 +114,7 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self._create_directories()
 
-        charm_config = self.framework.model.config
+        charm_config = self.model.config
         tenv = Environment(loader=FileSystemLoader('templates'))
 
         if self._stored.storage_type == 'iscsi':
@@ -181,7 +182,7 @@ class StorageConnectorCharm(CharmBase):
                 logging.exception('An error occured while restarting %s.', service)
 
     def _check_mandatory_config(self):
-        charm_config = self.framework.model.config
+        charm_config = self.model.config
         if self._stored.storage_type == "fc":
             mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
@@ -293,8 +294,8 @@ class StorageConnectorCharm(CharmBase):
         logging.debug('Rendering multipath json template')
         template = tenv.get_template(self.MULTIPATH_CONF_TEMPLATE)
         rendered_content = template.render(ctxt)
-        self._stored.multipath_path.write_text(rendered_content)
-        self._stored.multipath_path.chmod(0o644)
+        self._stored.mp_path.write_text(rendered_content)
+        self._stored.mp_path.chmod(0o644)
         return True
 
     def _iscsiadm_discovery(self, charm_config):
