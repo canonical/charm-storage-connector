@@ -323,14 +323,14 @@ class StorageConnectorCharm(CharmBase):
 
     def _fc_scan_host(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/fc_host').split('\n')
-        # number_hba_adapters = len(hba_adapters)
         for adapter in hba_adapters:
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
-                # subprocess.check_call(['echo', '"- - -"', '>',
-                                    #    '/sys/class/scsi_host/' + adapter + '/scan'])
                 file_name = 'sys/class/scsi_host' + adapter + '/scan'
-            except subprocess.CalledProcessError:
+                with open(file_name, "w") as f:
+                    f.write("- - -")
+
+            except Exception:
                 logging.exception('An error occured during the scan of the hosts.')
                 self.unit.status = BlockedStatus(
                     'Scan of the HBA adapters failed on the host.'
