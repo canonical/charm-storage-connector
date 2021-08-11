@@ -4,7 +4,8 @@
 
 This charm configures a unit to connect to a storage endpoint, either iSCSI or Fibre Channel. 
 It acts as a subordinate charm, which can be deployed on any baremetal or virtual machine, 
-alongside a main charm. It is not supported in containers. 
+alongside a main charm. It is not supported in containers due to lack of ability for lxd 
+containers to access iscsi and fiberchannel hardware of the underlying kernel. 
 
 If you configure this charm for iSCSI, it will:
 - Generate an iSCSI initiator name and put it in /etc/iscsi/initiatorname.iscsi
@@ -19,7 +20,7 @@ If you configure it for Fibre Channel, it will:
 - Install the package multipath-tools
 - Scan the host for HBA adapters
 - Retrieve the WWID for the Fibre Channel connection
-- Configure /etc/multipath/storage-connector-multipath.conf
+- Configure /etc/multipath/conf.d/storage-connector-multipath.conf
 - Reload and restart multipathd.service
 
 If iSCSI, the user can input a initiator name dictionary in config.yaml if they wish to use a
@@ -42,13 +43,15 @@ This will create the `storage-connector.charm` file and place it in the `.build`
 To deploy this subordinate charm with iSCSI on an ubuntu unit, deploy `cs:ubuntu` first.
 ```
 juju add-model my-test-model
-juju deploy cs:ubuntu --series bionic
+juju deploy cs:ubuntu --series focal
 juju deploy cs:storage-connector
-juju relate ubuntu storage-connector
 ```
 
-To edit the config of the target or the port:
+### To configure this charm for iSCSI, do the following.
+
+Edit the config of the target or the port:
 ```
+juju config storage-connector storage-type='iscsi'
 juju config storage-connector iscsi-target=<TARGET_IP> 
 juju config storage-connector iscsi-port=<PORT>
 ```
@@ -57,6 +60,24 @@ To restart services manually, two actions exist:
 ```
 juju run-action --unit ubuntu/0 restart-iscsi-services
 juju run-action --unit ubuntu/0 reload-multipathd-service
+```
+
+### To configure this charm for Fibre Channel, do the following.
+
+Set the storage type to FC:
+```
+juju config storage-connector storage-type='fc'
+```
+Set the various configuration parameters:
+```
+juju config storage-connector fc-lun-alias='data1' multipath-defaults='{"user_friendly_names":"yes", "find_multipaths":"yes", "polling_interval":"10"}' multipath-devices='{"vendor":"PURE", "product":"FlashArray", "fast_io_fail_tmo":"10", "path_selector":"queue-length 0", "path_grouping_policy":"group_by_prio", "rr_min_io":"1", "path_checker":"tur", "fast_io_fail_tmo":"1", "dev_loss_tmo":"infinity", "no_path_retry":"5", "failback":"immediate", "prio":"alua", "hardware_handler":"1 alua", "max_sectors_kb":"4096"}'
+```
+
+### After the configuration set, relate the charm to ubuntu
+
+This will apply the configuration to the desired host.
+```
+juju relate ubuntu storage-connector
 ```
 
 ## Scaling
