@@ -64,7 +64,7 @@ class TestCharm(unittest.TestCase):
             "storage-type": "iscsi",
             "iscsi-target": "abc",
             "iscsi-port": "443",
-            'multipath-devices': {'a':'b'}
+            'multipath-devices': {'a': 'b'}
         })
 
         self.assertFalse(self.harness.charm._stored.installed)
@@ -86,7 +86,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config({
             "storage-type": "fc",
             "fc-lun-alias": "data1",
-            'multipath-devices': {'a':'b'}
+            'multipath-devices': {'a': 'b'}
         })
 
         self.assertFalse(self.harness.charm._stored.installed)

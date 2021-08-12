@@ -40,8 +40,17 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    ISCSI_MANDATORY_CONFIG = ['storage-type', 'iscsi-target', 'iscsi-port', 'multipath-devices']
-    FC_MANDATORY_CONFIG = ['storage-type', 'fc-lun-alias', 'multipath-devices']
+    ISCSI_MANDATORY_CONFIG = [
+        'storage-type',
+        'iscsi-target',
+        'iscsi-port',
+        'multipath-devices'
+    ]
+    FC_MANDATORY_CONFIG = [
+        'storage-type',
+        'fc-lun-alias',
+        'multipath-devices'
+    ]
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
