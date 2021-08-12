@@ -40,7 +40,7 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    ISCSI_MANDATORY_CONFIG = ['storage-type', 'target', 'port', 'multipath-devices']
+    ISCSI_MANDATORY_CONFIG = ['storage-type', 'iscsi-target', 'iscsi-port', 'multipath-devices']
     FC_MANDATORY_CONFIG = ['storage-type', 'fc-lun-alias', 'multipath-devices']
 
     def __init__(self, *args):
@@ -61,12 +61,10 @@ class StorageConnectorCharm(CharmBase):
             configured=False,
             started=False,
             fc_scan_ran_once=False,
-            storage_type=self.model.config.get('storage-type').lower(),
-            mp_conf_name = 'juju-' + self.app.name + '-multipath.conf'
+            storage_type=self.model.config.get('storage-type'),
+            mp_conf_name='juju-' + self.app.name + '-multipath.conf'
         )
-        self._stored.set_default(
-            mp_path = self.MULTIPATH_CONF_PATH / self._stored.mp_conf_name
-        )
+        self.mp_path = self.MULTIPATH_CONF_PATH / self._stored.mp_conf_name
 
     def on_install(self, event):
         """Handle install state."""
@@ -109,7 +107,8 @@ class StorageConnectorCharm(CharmBase):
             return
 
         if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
-            self._fc_scan_host()
+            if not self._fc_scan_host():
+                return
 
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self._create_directories()
@@ -132,13 +131,7 @@ class StorageConnectorCharm(CharmBase):
         if not self._validate_multipath_config():
             return
 
-        logging.info('Reloading multipathd service')
-        try:
-            subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
-        except subprocess.CalledProcessError:
-            message = "An error occured while reloading the multipathd service."
-            self.unit.status = BlockedStatus(message)
-            logging.exception('%s', message)
+        self._reload_multipathd_service()
 
         logging.info("Setting started state")
         self._stored.started = True
@@ -167,8 +160,8 @@ class StorageConnectorCharm(CharmBase):
 
     def on_reload_multipathd_service_action(self, event):
         """Reload multipathd service."""
-        event.log('Restarting multipathd service')
-        subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
+        event.log('Reloading multipathd service')
+        self._reload_multipathd_service()
         event.set_results({"success": "True"})
 
     # Additional functions
@@ -181,20 +174,46 @@ class StorageConnectorCharm(CharmBase):
             except subprocess.CalledProcessError:
                 logging.exception('An error occured while restarting %s.', service)
 
+    def _reload_multipathd_service(self):
+        """Reload multipathd service."""
+        logging.info('Reloading multipathd service')
+        try:
+            subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
+        except subprocess.CalledProcessError:
+            self.unit.status = BlockedStatus(
+                "An error occured while reloading the multipathd service."
+            )
+            logging.exception(
+                '%s',
+                "An error occured while reloading the multipathd service."
+            )
+
     def _check_mandatory_config(self):
         charm_config = self.model.config
+
+        if charm_config['storage-type'] in ['iscsi', 'fc']:
+            if (self._stored.storage_type == 'None' or
+                    self._stored.storage_type not in ['iscsi', 'fc']):
+                # allow user to change storage type only if initial entry was incorrect
+                self._stored.storage_type = charm_config['storage-type'].lower()
+                logging.debug(
+                    "Storage type updated to {}".format(self._stored.storage_type)
+                )
+            elif charm_config['storage-type'] != self._stored.storage_type:
+                self.unit.status = BlockedStatus(
+                    "Storage type cannot be changed after deployment."
+                )
+                return False
+        else:
+            self.unit.status = BlockedStatus(
+                "Missing/Invalid storage type. Valid options are 'iscsi' or 'fc'."
+            )
+            return False
+
         if self._stored.storage_type == "fc":
             mandatory_config = self.FC_MANDATORY_CONFIG
         elif self._stored.storage_type == "iscsi":
             mandatory_config = self.ISCSI_MANDATORY_CONFIG
-        else:
-            self.unit.status = BlockedStatus("Missing or incorrect storage type")
-            return False
-
-        if self._stored.storage_type != self.config("storage-type"):
-            self.unit.status = BlockedStatus("Storage type cannot be changed after deployment.")
-            return
-
         missing_config = []
         for config in mandatory_config:
             if charm_config.get(config) is None:
@@ -284,18 +303,27 @@ class StorageConnectorCharm(CharmBase):
                 except Exception as e:
                     logging.info("An exception has occured. Please verify the format \
                                  of the multipath config options. Traceback: %s", e)
+                    self.unit.status = BlockedStatus(
+                        "Exception occured during the multipath \
+                        configuration. Please check logs."
+                    )
                     return False
 
         if self._stored.storage_type == 'fc':
             wwid = self._retrieve_multipath_wwid()
+            if not wwid:
+                self.unit.status = BlockedStatus(
+                    "No WWID was found. Please check multipath status and logs."
+                )
+                return False
             alias = charm_config.get('fc-lun-alias')
             ctxt['multipaths'] = {'wwid': wwid, 'alias': alias}
 
         logging.debug('Rendering multipath json template')
         template = tenv.get_template(self.MULTIPATH_CONF_TEMPLATE)
         rendered_content = template.render(ctxt)
-        self._stored.mp_path.write_text(rendered_content)
-        self._stored.mp_path.chmod(0o644)
+        self.mp_path.write_text(rendered_content)
+        self.mp_path.chmod(0o644)
         return True
 
     def _iscsiadm_discovery(self, charm_config):
@@ -322,8 +350,16 @@ class StorageConnectorCharm(CharmBase):
             )
 
     def _fc_scan_host(self):
-        hba_adapters = subprocess.getoutput('ls /sys/class/fc_host').split('\n')
-        for adapter in hba_adapters:
+        hba_adapters = subprocess.getoutput('ls /sys/class/scsi_host')
+        logging.debug('hba_adapters: {}'.format(hba_adapters))
+        if not hba_adapters:
+            logging.info('No scsi devices were found. Scan aborted')
+            self.unit.status = BlockedStatus(
+                "No scsi devices were found. Scan aborted"
+            )
+            return False
+
+        for adapter in hba_adapters.split('\n'):
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
                 file_name = 'sys/class/scsi_host' + adapter + '/scan'
@@ -335,19 +371,16 @@ class StorageConnectorCharm(CharmBase):
                 self.unit.status = BlockedStatus(
                     'Scan of the HBA adapters failed on the host.'
                 )
-                return
+                return False
         self._stored.fc_scan_ran_once = True
+        return True
 
     def _retrieve_multipath_wwid(self):
         logging.info('Retrive device WWID via multipath -ll')
         result = subprocess.getoutput(['multipath -ll'])
         wwid = re.findall(r'\(([\d\w]+)\)', result)
         logging.info("WWID is {}".format(wwid))
-        if not wwid or wwid is None:
-            self.unit.status = BlockedStatus(
-                'WWID was not found. Debug needed.'
-            )
-        else:
+        if wwid:
             return wwid[0]
 
     def _validate_multipath_config(self):

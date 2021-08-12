@@ -1,7 +1,7 @@
 options:
     storage-type:
         type: string
-        default:
+        default: None
         description: |
             Type of storage connection. Can either be "iscsi" or "fc" for fibre channel. The storage type cannot be changed after deployment.
     fc-lun-alias:
