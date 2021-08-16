@@ -371,7 +371,7 @@ class StorageConnectorCharm(CharmBase):
         for adapter in hba_adapters.split('\n'):
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
-                file_name = 'sys/class/scsi_host' + adapter + '/scan'
+                file_name = '/sys/class/scsi_host/' + adapter + '/scan'
                 with open(file_name, "w") as f:
                     f.write("- - -")
 
