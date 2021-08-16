@@ -1,16 +1,16 @@
-# iSCSI Connector Charm
+# Storage Connector Charm
 
 ## Overview
 
 This charm configures a unit to connect to a storage endpoint, either iSCSI or Fibre Channel. 
-It acts as a subordinate charm, which can be deployed on any baremetal or virtual machine, 
+It acts as a subordinate charm, which can be deployed on any bare metal or virtual machine, 
 alongside a main charm. It is not supported in containers due to lack of ability for lxd 
-containers to access iscsi and fiberchannel hardware of the underlying kernel. 
+containers to access iSCSI and Fibre Channel hardware of the underlying kernel. 
 
 If you configure this charm for iSCSI, it will:
 - Generate an iSCSI initiator name and put it in /etc/iscsi/initiatorname.iscsi
 - Install the package multipath-tools
-- Configure /etc/multipath/conf.d/storage-connector-multipath.conf for the correct array
+- Configure multipath under /etc/multipath/conf.d directory
 - Restart the services iscsid, open-iscsi
 - Perform an iSCSI discovery against a target
 - Login to the target
@@ -20,11 +20,11 @@ If you configure it for Fibre Channel, it will:
 - Install the package multipath-tools
 - Scan the host for HBA adapters
 - Retrieve the WWID for the Fibre Channel connection
-- Configure /etc/multipath/conf.d/storage-connector-multipath.conf
+- Configure multipath under /etc/multipath/conf.d directory
 - Reload and restart multipathd.service
 
 If iSCSI, the user can input a initiator name dictionary in config.yaml if they wish to use a
-specific iqn for a specific unit. Also, the target IP and port are needed to perform
+specific IQN for a specific unit. Also, the target IP and port are needed to perform
 the discovery and login with iscsiadm. 
 
 For Fibre Channel, the user can choose the device alias to be used when mapping the disk by 
@@ -40,7 +40,7 @@ make build
 ```
 This will create the `storage-connector.charm` file and place it in the `.build` directory.
 
-To deploy this subordinate charm with iSCSI on an ubuntu unit, deploy `cs:ubuntu` first.
+To deploy this subordinate charm on an ubuntu unit, deploy `cs:ubuntu` first.
 ```
 juju add-model my-test-model
 juju deploy cs:ubuntu --series focal

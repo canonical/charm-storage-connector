@@ -332,7 +332,7 @@ class StorageConnectorCharm(CharmBase):
         template = tenv.get_template(self.MULTIPATH_CONF_TEMPLATE)
         rendered_content = template.render(ctxt)
         self.mp_path.write_text(rendered_content)
-        self.mp_path.chmod(0o644)
+        self.mp_path.chmod(0o600)
         return True
 
     def _iscsiadm_discovery(self, charm_config):
@@ -410,7 +410,7 @@ class StorageConnectorCharm(CharmBase):
             self.unit.status = BlockedStatus(
                 'This charm is not supported on containers.'
             )
-            logging.debug(
+            logging.error(
                 'This charm is not supported on containers. Stopping execution.'
             )
             return True

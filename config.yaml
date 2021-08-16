@@ -8,7 +8,7 @@ options:
         type: string
         default: data1
         description: |
-            LUN alias to give to the wwid for the mapping of the device. It is used in the path of the new mounted device, i.e /dev/mapper/<FC-LUN-ALIAS>. 
+            LUN alias to give to the WWID for the mapping of the device. It is used in the path of the new mounted device, i.e /dev/mapper/<FC-LUN-ALIAS>. 
     iscsi-target:
         type: string
         default:
@@ -22,14 +22,14 @@ options:
         default: True
         description: |
             If set to True (default) and storage-type is iscsi, the charm will configure 
-            the iscsid.conf and multipath.conf configuration files, and then run a iscsiadm 
+            the iscsid and multipath configuration files, and then run a iscsiadm 
             discovery and login against the target. If set to False, the charm will simply 
             configure the unit but not run the discovery and login against the target. 
     initiator-dictionary:
         type: string
         default: '{}'
         description: |
-            Dictionary of hostnames (fqdn) and initiator names, surrounded by 
+            Dictionary of hostnames (FQDN) and initiator names, surrounded by 
             single quotes. The charm compares the machine hostname to 
             the list, and provide the correct initiator associated to 
             it. If not defined, the initiator name will be provided 
@@ -40,8 +40,8 @@ options:
         type: string
         default: "{user_friendly_names: yes}"
         description: |
-            In multipath config, sets the defaults configuration. String should be of json dictionary format.
-            Double quotes are essential to the correct format of this json string.
+            In multipath config, sets the defaults configuration. String should be of JSON dictionary format.
+            Double quotes are essential to the correct format of this JSON string.
             Example: 
                 value : '{"user_friendly_names":"yes", "find_multipaths":"yes", "polling_interval":"10"}'
                 Which will produce this configuration:
@@ -54,8 +54,8 @@ options:
         type: string
         default:
         description: |
-            In multipath config, add a device specific configuration. String should be of json dictionary format.
-            Double quotes are essential to the correct format of this json string.
+            In multipath config, add a device specific configuration. String should be of JSON dictionary format.
+            Double quotes are essential to the correct format of this JSON string.
             Example: 
                 value : '{"vendor":"PURE","product": "FlashArray","fast_io_fail_tmo": "10", "path_grouping_policy":"group_by_prio"}'
                 Which will produce this configuration:
@@ -70,7 +70,7 @@ options:
         default: 
         description: |
             In multipath config, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
-            to blacklist by vendor/product, by devnode or WWID. String should be of json dictionary format.
+            to blacklist by vendor/product, by devnode or WWID. String should be of JSON dictionary format.
             Example:
                 value: {"vendor": "QEMU", "product": "*"}
                 Which will produce this configuration:
