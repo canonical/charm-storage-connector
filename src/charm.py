@@ -40,17 +40,31 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    ISCSI_MANDATORY_CONFIG = [
-        'storage-type',
-        'iscsi-target',
-        'iscsi-port',
-        'multipath-devices'
-    ]
-    FC_MANDATORY_CONFIG = [
-        'storage-type',
-        'fc-lun-alias',
-        'multipath-devices'
-    ]
+    # ISCSI_MANDATORY_CONFIG = [
+    #     'storage-type',
+    #     'iscsi-target',
+    #     'iscsi-port',
+    #     'multipath-devices'
+    # ]
+    # FC_MANDATORY_CONFIG = [
+    #     'storage-type',
+    #     'fc-lun-alias',
+    #     'multipath-devices'
+    # ]
+    VALID_STORAGE_TYPES = ["fc", "iscsi"]
+    MANDATORY_CONFIG = {
+        "iscsi": [
+            'storage-type',
+            'iscsi-target',
+            'iscsi-port',
+            'multipath-devices'
+        ],
+        "fc": [
+            'storage-type',
+            'fc-lun-alias',
+            'multipath-devices'
+        ],
+    }
 
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
@@ -78,7 +92,7 @@ class StorageConnectorCharm(CharmBase):
     def on_install(self, event):
         """Handle install state."""
         self.unit.status = MaintenanceStatus("Installing charm software")
-        if self.check_if_container():
+        if self._check_if_container():
             return
 
         if not self._check_mandatory_config():
@@ -101,7 +115,7 @@ class StorageConnectorCharm(CharmBase):
                     logging.info('Enabling %s service', service)
                     subprocess.check_call(['systemctl', 'enable', service])
                 except subprocess.CalledProcessError:
-                    logging.exception('Unable to enable %s.', service)
+                    logging.exception('Failed to enable %s.', service)
 
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
@@ -109,33 +123,32 @@ class StorageConnectorCharm(CharmBase):
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
-        if self.check_if_container():
+        if self._check_if_container():
             return
 
         if not self._check_mandatory_config():
             return
 
         if self._stored.storage_type == 'fc' and not self._stored.fc_scan_ran_once:
-            if not self._fc_scan_host():
+            if not self._fc_scan_host_successfully():
                 return
 
         self.unit.status = MaintenanceStatus("Rendering charm configuration")
         self._create_directories()
 
-        charm_config = self.model.config
         tenv = Environment(loader=FileSystemLoader('templates'))
 
         if self._stored.storage_type == 'iscsi':
-            self._iscsi_initiator(tenv, charm_config)
-            self._iscsid_configuration(tenv, charm_config)
+            self._iscsi_initiator(tenv)
+            self._iscsid_configuration(tenv)
             self._restart_iscsi_services()
 
-            if charm_config.get('iscsi-discovery-and-login'):
+            if self.model.config.get('iscsi-discovery-and-login'):
                 logging.info('Launching iscsiadm discovery and login')
-                self._iscsiadm_discovery(charm_config)
+                self._iscsiadm_discovery()
                 self._iscsiadm_login()
 
-        if not self._multipath_configuration(tenv, charm_config):
+        if not self._multipath_configuration(tenv):
             return
         if not self._validate_multipath_config():
             return
@@ -200,9 +213,9 @@ class StorageConnectorCharm(CharmBase):
     def _check_mandatory_config(self):
         charm_config = self.model.config
 
-        if charm_config['storage-type'] in ['iscsi', 'fc']:
+        if charm_config['storage-type'] in self.VALID_STORAGE_TYPES:
             if (self._stored.storage_type == 'None' or
-                    self._stored.storage_type not in ['iscsi', 'fc']):
+                    self._stored.storage_type not in self.VALID_STORAGE_TYPES):
                 # allow user to change storage type only if initial entry was incorrect
                 self._stored.storage_type = charm_config['storage-type'].lower()
                 logging.debug(
@@ -219,10 +232,7 @@ class StorageConnectorCharm(CharmBase):
             )
             return False
 
-        if self._stored.storage_type == "fc":
-            mandatory_config = self.FC_MANDATORY_CONFIG
-        elif self._stored.storage_type == "iscsi":
-            mandatory_config = self.ISCSI_MANDATORY_CONFIG
+        mandatory_config = self.MANDATORY_CONFIG[self._stored.storage_type]
         missing_config = []
         for config in mandatory_config:
             if charm_config.get(config) is None:
@@ -261,7 +271,8 @@ class StorageConnectorCharm(CharmBase):
                 exist_ok=True,
                 mode=0o750)
 
-    def _iscsi_initiator(self, tenv, charm_config):
+    def _iscsi_initiator(self, tenv):
+        charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
         initiators = charm_config.get('initiator-dictionary')
@@ -283,7 +294,8 @@ class StorageConnectorCharm(CharmBase):
         rendered_content = template.render(ctxt)
         self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
 
-    def _iscsid_configuration(self, tenv, charm_config):
+    def _iscsid_configuration(self, tenv):
+        charm_config = self.model.config
         ctxt = {
             'node_startup': charm_config.get('iscsi-node-startup'),
             'node_fastabort': charm_config.get('iscsi-node-session-iscsi-fastabort'),
@@ -300,23 +312,28 @@ class StorageConnectorCharm(CharmBase):
         self.ISCSI_CONF.write_text(rendered_content)
         self.ISCSI_CONF.chmod(0o600)
 
-    def _multipath_configuration(self, tenv, charm_config):
+    def _multipath_configuration(self, tenv):
+        charm_config = self.model.config
         ctxt = {}
         multipath_sections = ['defaults', 'devices', 'blacklist']
         for section in multipath_sections:
             config = charm_config.get('multipath-' + section)
             if config:
-                logging.info("Gather information for the multipaths section")
+                logging.info("Gather information for the multipaths section " + section)
+                logging.debug("multipath-" + section + " data: " + config)
                 try:
                     ctxt[section] = json.loads(config)
                 except Exception as e:
                     logging.info("An exception has occured. Please verify the format \
-                                 of the multipath config options. Traceback: %s", e)
+                                 of the multipath config option %s. \
+                                Traceback: %s", section, e)
                     self.unit.status = BlockedStatus(
                         "Exception occured during the multipath \
                         configuration. Please check logs."
                     )
                     return False
+            else:
+                logging.debug("multipath-" + section + " is empty.")
 
         if self._stored.storage_type == 'fc':
             wwid = self._retrieve_multipath_wwid()
@@ -335,7 +352,8 @@ class StorageConnectorCharm(CharmBase):
         self.mp_path.chmod(0o600)
         return True
 
-    def _iscsiadm_discovery(self, charm_config):
+    def _iscsiadm_discovery(self):
+        charm_config = self.model.config
         target = charm_config.get('iscsi-target')
         port = charm_config.get('iscsi-port')
         logging.info('Launching iscsiadm discovery against target')
@@ -358,7 +376,7 @@ class StorageConnectorCharm(CharmBase):
                 'Iscsi login failed against target'
             )
 
-    def _fc_scan_host(self):
+    def _fc_scan_host_successfully(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/scsi_host')
         logging.debug('hba_adapters: {}'.format(hba_adapters))
         if not hba_adapters:
@@ -404,7 +422,7 @@ class StorageConnectorCharm(CharmBase):
             return False
         return True
 
-    def check_if_container(self):
+    def _check_if_container(self):
         """Check if the charm is being deployed on a container host."""
         if utils.is_container():
             self.unit.status = BlockedStatus(

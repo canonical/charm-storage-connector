@@ -22,7 +22,7 @@ options:
         default: True
         description: |
             If set to True (default) and storage-type is iscsi, the charm will configure 
-            the iscsid and multipath configuration files, and then run a iscsiadm 
+            the iscsid and multipath configuration files, and then run an iscsiadm 
             discovery and login against the target. If set to False, the charm will simply 
             configure the unit but not run the discovery and login against the target. 
     initiator-dictionary:
@@ -70,9 +70,9 @@ options:
         default: 
         description: |
             In multipath config, add a blacklist device section to exlude local disks from being handled by multipath-tools. It is possible
-            to blacklist by vendor/product, by devnode or WWID. String should be of JSON dictionary format.
+            to blacklist by vendor/product, by devnode or WWID. String should be of JSON dictionary format. Double quotes are essential to the correct format of this JSON string.
             Example:
-                value: {"vendor": "QEMU", "product": "*"}
+                value: '{"vendor": "QEMU", "product": "*"}'
                 Which will produce this configuration:
                 blacklist {
                     device {
