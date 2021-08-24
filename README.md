@@ -76,7 +76,7 @@ juju config storage-connector storage-type='fc' \
     multipath-devices='{"vendor":"PURE", "product":"FlashArray", "fast_io_fail_tmo":"10", "path_selector":"queue-length 0", "path_grouping_policy":"group_by_prio", "rr_min_io":"1", "path_checker":"tur", "fast_io_fail_tmo":"1", "dev_loss_tmo":"infinity", "no_path_retry":"5", "failback":"immediate", "prio":"alua", "hardware_handler":"1 alua", "max_sectors_kb":"4096"}'
 ```
 
-### After the configuration isset, relate the charm to ubuntu
+### After the configuration is set, relate the charm to ubuntu
 
 This will apply the configuration to hosts running the "ubuntu" application.
 ```
