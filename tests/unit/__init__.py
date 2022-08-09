@@ -2,9 +2,11 @@
 """Init mocking for unit tests."""
 
 import sys
+from unittest import mock
 
-import mock
+from ops import testing
 
+testing.SIMULATE_CAN_CONNECT = True
 
 sys.path.append('src')
 

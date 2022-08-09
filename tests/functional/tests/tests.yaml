@@ -17,4 +17,10 @@ tests:
 target_deploy_status:
   storage-connector:
     workload-status: blocked
-    workload-status-message: "Missing"
+    workload-status-message-prefix: "Missing"
+  ubuntu:
+    workload-status: active
+    workload-status-message-regex: "^$"
+  ubuntu-target:
+    workload-status: active
+    workload-status-message-regex: "^$"

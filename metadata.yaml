@@ -13,9 +13,6 @@ tags:
     - fibrechannel
     - fiberchannel
 subordinate: true
-series:
-    - bionic
-    - focal
 requires:
    host:
        interface: juju-info

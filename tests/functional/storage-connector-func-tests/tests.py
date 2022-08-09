@@ -45,8 +45,9 @@ class StorageConnectorTest(test_utils.BaseCharmTest):
             'iscsi-node-session-auth-password': 'password123',
             'iscsi-node-session-auth-username-in': 'iscsi-target',
             'iscsi-node-session-auth-password-in': 'secretpass',
+            'multipath-devices': '{}'
         }
-        zaza.model.set_application_config('iscsi-connector', conf)
+        zaza.model.set_application_config('storage-connector', conf)
 
     def get_unit_full_hostname(self, unit_name):
         """Retrieve the full hostname of a unit."""
@@ -59,7 +60,22 @@ class StorageConnectorTest(test_utils.BaseCharmTest):
         """Test iscsi configuration and wait for idle status."""
         self.configure_iscsi_connector()
         logging.info('Wait for idle/ready status...')
-        zaza.model.wait_for_application_states()
+        zaza.model.wait_for_application_states(
+            states={
+                "storage-connector": {
+                    "workload-status": "active",
+                    "workload-status-message-prefix": "Unit is ready"
+                },
+                "ubuntu": {
+                    "workload-status": "active",
+                    "workload-status-message-regex": "^$"
+                },
+                "ubuntu-target": {
+                    "workload-status": "active",
+                    "workload-status-message-regex": "^$"
+                }
+            }
+        )
 
     def test_validate_iscsi_session(self):
         """Validate that the iscsi session is active."""

@@ -40,17 +40,6 @@ class StorageConnectorCharm(CharmBase):
     ISCSI_SERVICES = ['iscsid', 'open-iscsi']
     MULTIPATHD_SERVICE = 'multipathd'
 
-    # ISCSI_MANDATORY_CONFIG = [
-    #     'storage-type',
-    #     'iscsi-target',
-    #     'iscsi-port',
-    #     'multipath-devices'
-    # ]
-    # FC_MANDATORY_CONFIG = [
-    #     'storage-type',
-    #     'fc-lun-alias',
-    #     'multipath-devices'
-    # ]
     VALID_STORAGE_TYPES = ["fc", "iscsi"]
     MANDATORY_CONFIG = {
         "iscsi": [
@@ -320,7 +309,7 @@ class StorageConnectorCharm(CharmBase):
             config = charm_config.get('multipath-' + section)
             if config:
                 logging.info("Gather information for the multipaths section " + section)
-                logging.debug("multipath-" + section + " data: " + config)
+                logging.debug("multipath-" + section + " data: " + str(config))
                 try:
                     ctxt[section] = json.loads(config)
                 except Exception as e:

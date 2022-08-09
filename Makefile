@@ -2,7 +2,7 @@ PYTHON := /usr/bin/python3
 
 PROJECTPATH=$(dir $(realpath $(MAKEFILE_LIST)))
 ifndef CHARM_BUILD_DIR
-	CHARM_BUILD_DIR=${PROJECTPATH}.build
+	CHARM_BUILD_DIR=${PROJECTPATH}
 endif
 METADATA_FILE="metadata.yaml"
 CHARM_NAME=$(shell cat ${PROJECTPATH}/${METADATA_FILE} | grep -E '^name:' | awk '{print $$2}')
@@ -16,8 +16,8 @@ help:
 	@echo " make release - run clean and build targets"
 	@echo " make lint - run flake8 and black"
 	@echo " make proof - run charm proof"
-	@echo " make unit - run the tests defined in the unittest subdirectory"
-	@echo " make func - run the tests defined in the functional subdirectory"
+	@echo " make unittests - run the tests defined in the unittest subdirectory"
+	@echo " make functional - run the tests defined in the functional subdirectory"
 	@echo " make test - run lint, proof, unittests and functional targets"
 	@echo ""
 
@@ -25,19 +25,14 @@ clean:
 	@echo "Cleaning files"
 	@git clean -fXd
 	@echo "Cleaning existing build"
-	@rm -rf ${CHARM_BUILD_DIR}/${CHARM_NAME}
+	@rm -rf ${CHARM_BUILD_DIR}/${CHARM_NAME}.charm
 
 build:
-	@charmcraft build
+	@charmcraft pack --verbose
+	@bash -c ./rename.sh
 
-# bypassing bug https://github.com/canonical/charmcraft/issues/109
-unpack: build
-	@mkdir -p ${CHARM_BUILD_DIR}/${CHARM_NAME}
-	@echo "Unpacking built .charm into ${CHARM_BUILD_DIR}/${CHARM_NAME}"
-	@cd ${CHARM_BUILD_DIR}/${CHARM_NAME} && unzip -q ${CHARM_BUILD_DIR}/${CHARM_NAME}.charm
-
-release: clean build unpack
-	@echo "Charm is built at ${CHARM_BUILD_DIR}/${CHARM_NAME}"
+release: clean build
+	@echo "Charm is built at ${CHARM_BUILD_DIR}/${CHARM_NAME}.charm"
 
 lint:
 	@echo "Running lint checks"

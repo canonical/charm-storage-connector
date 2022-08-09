@@ -38,7 +38,7 @@ options:
               "hostname2": "iqn.yyyy-mm.naming-authority:uniquename2}'
     multipath-defaults:
         type: string
-        default: "{user_friendly_names: yes}"
+        default: '{"user_friendly_names": "yes"}'
         description: |
             In multipath config, sets the defaults configuration. String should be of JSON dictionary format.
             Double quotes are essential to the correct format of this JSON string.
