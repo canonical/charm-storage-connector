@@ -163,6 +163,28 @@ class TestCharm(unittest.TestCase):
         m_check_call.assert_called_once_with(["systemctl", "reload", "multipathd"])
         self.assertEqual(action_event.results['success'], 'True')
 
+    @patch("metrics.uninstall_multipath_status_cronjob")
+    @patch("metrics.install_multipath_status_cronjob")
+    @patch("metrics.uninstall_exporter_snap")
+    @patch("metrics.install_exporter_snap")
+    def test_on_metrics_endpoint_handlers(
+        self,
+        m_install_exporter_snap,
+        m_uninstall_exporter_snap,
+        m_install_multipath_status_cronjob,
+        m_uninstall_multipath_status_cronjob
+    ):
+        """Test the relation event handlers for metrics-endpoint."""
+        rel_id = self.harness.add_relation("metrics-endpoint", "prometheus-k8s")
+        m_install_exporter_snap.assert_called_once_with(
+            self.harness.charm.model.resources
+        )
+        m_install_multipath_status_cronjob.assert_called_once()
+
+        self.harness.remove_relation(rel_id)
+        m_uninstall_exporter_snap.assert_called_once()
+        m_uninstall_multipath_status_cronjob.assert_called_once()
+
 
 class FakeActionEvent(EventBase):
     """Set a fake action class for unit tests mocking."""

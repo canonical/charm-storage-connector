@@ -18,8 +18,10 @@ from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
-import utils
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider  # noqa
 
+import metrics
+import utils  # noqa
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +60,7 @@ class StorageConnectorCharm(CharmBase):
     def __init__(self, *args):
         """Initialize charm and configure states and events to observe."""
         super().__init__(*args)
+
         # -- standard hook observation
         self.framework.observe(self.on.install, self.on_install)
         self.framework.observe(self.on.install, self.render_config)
@@ -67,6 +70,21 @@ class StorageConnectorCharm(CharmBase):
                                self.on_restart_iscsi_services_action)
         self.framework.observe(self.on.reload_multipathd_service_action,
                                self.on_reload_multipathd_service_action)
+        self.framework.observe(self.on.metrics_endpoint_relation_created,
+                               self._on_metrics_endpoint_relation_created)
+        self.framework.observe(self.on.metrics_endpoint_relation_broken,
+                               self._on_metrics_endpoint_relation_broken)
+
+        self.metrics_endpoint = MetricsEndpointProvider(
+            self,
+            jobs=[
+                {
+                    "metrics_path": "/",
+                    "static_configs": [{"targets": ["*:9090"]}],
+                },
+            ]
+        )
+
         # -- initialize states --
         self._stored.set_default(
             installed=False,
@@ -422,6 +440,26 @@ class StorageConnectorCharm(CharmBase):
             )
             return True
         return False
+
+    def _on_metrics_endpoint_relation_created(self, event):
+        """Relation-created event handler for metrics-endpoint."""
+        self.unit.status = MaintenanceStatus("Installing exporter software")
+        metrics.install_exporter_snap(self.model.resources)
+
+        self.unit.status = MaintenanceStatus("Installing multipath status cronjob")
+        metrics.install_multipath_status_cronjob()
+
+        self.unit.status = ActiveStatus("Unit is ready")
+
+    def _on_metrics_endpoint_relation_broken(self, event):
+        """Relation-broken event handler for metrics-endpoint."""
+        self.unit.status = MaintenanceStatus("Removing exporter software")
+        metrics.uninstall_exporter_snap()
+
+        self.unit.status = MaintenanceStatus("Removing multipath status cronjob")
+        metrics.uninstall_multipath_status_cronjob()
+
+        self.unit.status = ActiveStatus("Unit is ready")
 
 
 if __name__ == "__main__":
