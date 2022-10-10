@@ -69,3 +69,24 @@ class TestMetricsUtils(TestCase):
         mock_cron_script_output_path.unlink.assert_called_once_with(
             missing_ok=True
         )
+
+    @patch("storage_connector.metrics_utils.install_multipath_status_cronjob")
+    @patch("storage_connector.metrics_utils.install_exporter_snap")
+    def test_install_exporter(
+        self, mock_install_exporter_snap, mock_install_multipath_status_cronjob
+    ):
+        """Test the install_exporter function."""
+        mock_resources = MagicMock()
+        metrics_utils.install_exporter(mock_resources)
+        mock_install_exporter_snap.assert_called_once()
+        mock_install_multipath_status_cronjob.assert_called_once()
+
+    @patch("storage_connector.metrics_utils.uninstall_multipath_status_cronjob")
+    @patch("storage_connector.metrics_utils.uninstall_exporter_snap")
+    def test_uninstall_exporter(
+        self, mock_uninstall_exporter_snap, mock_uninstall_multipath_status_cronjob
+    ):
+        """Test the uninstall_exporter function."""
+        metrics_utils.uninstall_exporter()
+        mock_uninstall_exporter_snap.assert_called_once()
+        mock_uninstall_multipath_status_cronjob.assert_called_once()

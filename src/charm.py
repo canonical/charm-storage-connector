@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider  # noqa
 
-from storage_connector import metrics_utils
+from storage_connector import metrics_utils, nrpe_utils
 import utils  # noqa
 
 logger = logging.getLogger(__name__)
@@ -66,6 +66,7 @@ class StorageConnectorCharm(CharmBase):
         self.framework.observe(self.on.install, self.render_config)
         self.framework.observe(self.on.start, self.on_start)
         self.framework.observe(self.on.config_changed, self.render_config)
+        self.framework.observe(self.on.config_changed, self.on_config_changed)
         self.framework.observe(self.on.restart_iscsi_services_action,
                                self.on_restart_iscsi_services_action)
         self.framework.observe(self.on.reload_multipathd_service_action,
@@ -74,6 +75,12 @@ class StorageConnectorCharm(CharmBase):
                                self._on_metrics_endpoint_relation_created)
         self.framework.observe(self.on.metrics_endpoint_relation_broken,
                                self._on_metrics_endpoint_relation_broken)
+        self.framework.observe(self.on.nrpe_external_master_relation_created,
+                               self._on_nrpe_external_master_relation_created)
+        self.framework.observe(self.on.nrpe_external_master_relation_changed,
+                               self._on_nrpe_external_master_relation_changed)
+        self.framework.observe(self.on.nrpe_external_master_relation_broken,
+                               self._on_nrpe_external_master_relation_broken)
 
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
@@ -92,7 +99,9 @@ class StorageConnectorCharm(CharmBase):
             started=False,
             fc_scan_ran_once=False,
             storage_type=self.model.config.get('storage-type'),
-            mp_conf_name='juju-' + self.app.name + '-multipath.conf'
+            mp_conf_name='juju-' + self.app.name + '-multipath.conf',
+            prometheus_related=False,
+            nrpe_related=False
         )
         self.mp_path = self.MULTIPATH_CONF_PATH / self._stored.mp_conf_name
 
@@ -127,6 +136,10 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Install complete")
         logging.info("Install of software complete")
         self._stored.installed = True
+
+    def on_config_changed(self, event):
+        """Config-changed event handler."""
+        nrpe_utils.update_nrpe_config(self.model.config)
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
@@ -443,22 +456,48 @@ class StorageConnectorCharm(CharmBase):
 
     def _on_metrics_endpoint_relation_created(self, event):
         """Relation-created event handler for metrics-endpoint."""
-        self.unit.status = MaintenanceStatus("Installing exporter software")
-        metrics_utils.install_exporter_snap(self.model.resources)
+        self.unit.status = MaintenanceStatus("Installing exporter")
+        metrics_utils.install_exporter(self.model.resources)
 
-        self.unit.status = MaintenanceStatus("Installing multipath status cronjob")
-        metrics_utils.install_multipath_status_cronjob()
-
+        self._stored.prometheus_related = True
         self.unit.status = ActiveStatus("Unit is ready")
 
     def _on_metrics_endpoint_relation_broken(self, event):
         """Relation-broken event handler for metrics-endpoint."""
-        self.unit.status = MaintenanceStatus("Removing exporter software")
-        metrics_utils.uninstall_exporter_snap()
+        if not self._stored.nrpe_related:
+            self.unit.status = MaintenanceStatus("Removing exporter")
+            metrics_utils.uninstall_exporter()
 
-        self.unit.status = MaintenanceStatus("Removing multipath status cronjob")
-        metrics_utils.uninstall_multipath_status_cronjob()
+        self._stored.prometheus_related = False
+        self.unit.status = ActiveStatus("Unit is ready")
 
+    def _on_nrpe_external_master_relation_created(self, event):
+        """Relation-created event handler for nrpe-external-master."""
+        self.unit.status = MaintenanceStatus("Installing exporter")
+        metrics_utils.install_exporter(self.model.resources)
+
+        self.unit.status = MaintenanceStatus("Installing nrpe scripts")
+        nrpe_utils.create_nagios_user()
+        nrpe_utils.update_nrpe_config(self.model.config)
+
+        self._stored.nrpe_related = True
+        self.unit.status = ActiveStatus("Unit is ready")
+
+    def _on_nrpe_external_master_relation_changed(self, event):
+        """Relation-changed event handler for nrpe-external-master."""
+        nrpe_utils.update_nrpe_config(self.model.config)
+
+    def _on_nrpe_external_master_relation_broken(self, event):
+        """Relation-broken event handler for nrpe-external-master."""
+        if not self._stored.prometheus_related:
+            self.unit.status = MaintenanceStatus("Removing exporter software")
+            metrics_utils.uninstall_exporter()
+
+        self.unit.status = MaintenanceStatus("Uninstalling nrpe scripts")
+        nrpe_utils.unsync_nrpe_files()
+        nrpe_utils.remove_nagios_user()
+
+        self._stored.nrpe_related = False
         self.unit.status = ActiveStatus("Unit is ready")
 
 
