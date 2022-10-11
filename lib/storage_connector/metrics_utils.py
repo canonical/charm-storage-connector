@@ -20,7 +20,6 @@ specified otherwise. This means that scrape interval shorter than 1 min will
 have no effect since the cronjob is running every minute.
 """
 import logging
-from os import stat
 from pathlib import Path
 
 from ops.model import ModelError
@@ -30,44 +29,41 @@ from charms.operator_libs_linux.v1 import snap  # noqa
 logger = logging.getLogger(__name__)
 
 
-class Configuration:
-    """Module level configuration."""
-
-    exporter_snap_name = "prometheus-iscsi-exporter"
-    cron_script_path = Path("/etc/cron.d/multipath")
-    cron_script_output_path = Path(
-        f"/var/snap/{exporter_snap_name}/current/multipath"
-    )
+EXPORTER_SNAP_NAME = "prometheus-iscsi-exporter"
+CRON_SCRIPT_PATH = Path("/etc/cron.d/multipath")
+CRON_SCRIPT_OUTPUT_PATH = Path(
+    f"/var/snap/{EXPORTER_SNAP_NAME}/current/multipath"
+)
 
 
 def install_multipath_status_cronjob():
     """Install the cronjob to run multipath -ll every minute."""
     # crond expects newline before EOF or else it ignores the script
-    Configuration.cron_script_path.write_text(
-        f"* * * * * root multipath -ll > {str(Configuration.cron_script_output_path)}\n"
+    CRON_SCRIPT_PATH.write_text(
+        f"* * * * * root multipath -ll > {str(CRON_SCRIPT_OUTPUT_PATH)}\n"
     )
-    Configuration.cron_script_path.chmod(mode=0o644)
+    CRON_SCRIPT_PATH.chmod(mode=0o644)
 
 
 def uninstall_multipath_status_cronjob():
     """Uninstall the cronjob."""
-    Configuration.cron_script_path.unlink(missing_ok=True)
-    Configuration.cron_script_output_path.unlink(missing_ok=True)
+    CRON_SCRIPT_PATH.unlink(missing_ok=True)
+    CRON_SCRIPT_OUTPUT_PATH.unlink(missing_ok=True)
 
 
 def install_exporter_snap(resources):
     """Install the prometheus-iscsi-exporter snap."""
     try:
-        snap_resource = resources.fetch(Configuration.exporter_snap_name)
+        snap_resource = resources.fetch(EXPORTER_SNAP_NAME)
     except ModelError:
         snap_resource = None
 
-    if snap_resource and stat(snap_resource).st_size != 0:
+    if snap_resource and Path(snap_resource).stat().st_size != 0:
         logger.info("Installing snap from local resource")
         snap.install_local(snap_resource, dangerous=True)
     else:
         logger.info("Installing snap from snap store")
-        snap.add(Configuration.exporter_snap_name)
+        snap.add(EXPORTER_SNAP_NAME)
 
     logger.info("Installed snap successfully")
 
@@ -75,4 +71,4 @@ def install_exporter_snap(resources):
 def uninstall_exporter_snap():
     """Uninstall the prometheus-iscsi-exporter snap."""
     logger.info("Removing snap")
-    snap.remove(Configuration.exporter_snap_name)
+    snap.remove(EXPORTER_SNAP_NAME)

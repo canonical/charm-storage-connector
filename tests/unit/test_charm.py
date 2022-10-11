@@ -163,10 +163,10 @@ class TestCharm(unittest.TestCase):
         m_check_call.assert_called_once_with(["systemctl", "reload", "multipathd"])
         self.assertEqual(action_event.results['success'], 'True')
 
-    @patch("metrics.uninstall_multipath_status_cronjob")
-    @patch("metrics.install_multipath_status_cronjob")
-    @patch("metrics.uninstall_exporter_snap")
-    @patch("metrics.install_exporter_snap")
+    @patch("storage_connector.metrics_utils.uninstall_multipath_status_cronjob")
+    @patch("storage_connector.metrics_utils.install_multipath_status_cronjob")
+    @patch("storage_connector.metrics_utils.uninstall_exporter_snap")
+    @patch("storage_connector.metrics_utils.install_exporter_snap")
     def test_on_metrics_endpoint_handlers(
         self,
         m_install_exporter_snap,

@@ -20,7 +20,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider  # noqa
 
-import metrics
+from storage_connector import metrics_utils
 import utils  # noqa
 
 logger = logging.getLogger(__name__)
@@ -444,20 +444,20 @@ class StorageConnectorCharm(CharmBase):
     def _on_metrics_endpoint_relation_created(self, event):
         """Relation-created event handler for metrics-endpoint."""
         self.unit.status = MaintenanceStatus("Installing exporter software")
-        metrics.install_exporter_snap(self.model.resources)
+        metrics_utils.install_exporter_snap(self.model.resources)
 
         self.unit.status = MaintenanceStatus("Installing multipath status cronjob")
-        metrics.install_multipath_status_cronjob()
+        metrics_utils.install_multipath_status_cronjob()
 
         self.unit.status = ActiveStatus("Unit is ready")
 
     def _on_metrics_endpoint_relation_broken(self, event):
         """Relation-broken event handler for metrics-endpoint."""
         self.unit.status = MaintenanceStatus("Removing exporter software")
-        metrics.uninstall_exporter_snap()
+        metrics_utils.uninstall_exporter_snap()
 
         self.unit.status = MaintenanceStatus("Removing multipath status cronjob")
-        metrics.uninstall_multipath_status_cronjob()
+        metrics_utils.uninstall_multipath_status_cronjob()
 
         self.unit.status = ActiveStatus("Unit is ready")
 
