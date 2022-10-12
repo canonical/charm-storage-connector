@@ -51,8 +51,14 @@ class TestNRPE(TestCase):
         self, mock_sync_nrpe_files, mock_nrpe_compat
     ):
         """Test update_nrpe_config function."""
-        config = {"nagios_multipath_paths_per_volume": 4}
-        nrpe_utils.update_nrpe_config(config)
+        mock_config = MagicMock()
+        mock_config.get.return_value = 1
+        nrpe_utils.update_nrpe_config(mock_config)
         mock_sync_nrpe_files.assert_called_once()
-        mock_nrpe_compat.return_value.add_check.assert_called_once()
+        mock_nrpe_compat.return_value.add_check.assert_called_once_with(
+            shortname="multipath",
+            description="Check multipath path count",
+            check_cmd="/usr/local/lib/nagios/plugins/check_iscsi_metric.py -n 1"
+        )
         mock_nrpe_compat.return_value.write.assert_called_once()
+        mock_config.get.assert_called_once_with("nagios_multipath_paths_per_volume")
