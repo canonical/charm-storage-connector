@@ -1,5 +1,4 @@
 """Unit tests for the nrpe library."""
-from pathlib import Path
 from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
@@ -8,50 +7,6 @@ from storage_connector import nrpe_utils
 
 class TestNRPE(TestCase):
     """Nrpe module related tests."""
-
-    @patch("shutil.chown")
-    @patch("pathlib.Path.exists")
-    @patch("charms.operator_libs_linux.v0.passwd.add_user")
-    def test_create_nagios_user(self, mock_add_user, mock_exists, mock_chown):
-        """Test create_nagios_user function."""
-        mock_exists.return_value = True
-        nrpe_utils.create_nagios_user()
-        mock_add_user.assert_called_once_with(
-            "nagios",
-            home_dir=Path("/var/lib/nagios"),
-            system_user=True,
-            shell="/usr/sbin/nologin"
-        )
-        mock_chown.assert_called_once_with(
-            Path("/var/lib/nagios"), user="nagios", group="nagios"
-        )
-
-    @patch("shutil.chown")
-    @patch("pathlib.Path.mkdir")
-    @patch("pathlib.Path.exists")
-    @patch("charms.operator_libs_linux.v0.passwd.add_user")
-    def test_create_nagios_user_create_home(
-        self, mock_add_user, mock_exists, mock_mkdir, mock_chown
-    ):
-        """Test create_nagios_user function."""
-        mock_exists.return_value = False
-        nrpe_utils.create_nagios_user()
-        mock_add_user.assert_called_once_with(
-            "nagios",
-            home_dir=Path("/var/lib/nagios"),
-            system_user=True,
-            shell="/usr/sbin/nologin"
-        )
-        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
-        mock_chown.assert_called_once_with(
-            Path("/var/lib/nagios"), user="nagios", group="nagios"
-        )
-
-    @patch("charms.operator_libs_linux.v0.passwd.remove_user")
-    def test_remove_nagios_user(self, mock_remove_user):
-        """Test remove_nagios_user function."""
-        nrpe_utils.remove_nagios_user()
-        mock_remove_user.assert_called_once_with("nagios", remove_home=True)
 
     @patch("storage_connector.nrpe_utils.charm_dir")
     @patch("storage_connector.nrpe_utils.rsync")

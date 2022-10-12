@@ -185,16 +185,10 @@ class TestCharm(unittest.TestCase):
 
     @patch("storage_connector.metrics_utils.uninstall_exporter")
     @patch("storage_connector.metrics_utils.install_exporter")
-    @patch("storage_connector.nrpe_utils.remove_nagios_user")
-    @patch("storage_connector.nrpe_utils.create_nagios_user")
     @patch("storage_connector.nrpe_utils.unsync_nrpe_files")
-    @patch("storage_connector.nrpe_utils.update_nrpe_config")
     def test_on_nrpe_external_master_handlers(
         self,
-        m_update_nrpe_config,
         m_unsync_nrpe_files,
-        m_create_nagios_user,
-        m_remove_nagios_user,
         m_install_exporter,
         m_uninstall_exporter,
     ):
@@ -203,13 +197,10 @@ class TestCharm(unittest.TestCase):
         m_install_exporter.assert_called_once_with(
             self.harness.charm.model.resources
         )
-        m_update_nrpe_config.assert_called_once()
-        m_create_nagios_user.assert_called_once()
 
         self.harness.remove_relation(rel_id)
         m_uninstall_exporter.assert_called_once()
         m_unsync_nrpe_files.assert_called_once()
-        m_remove_nagios_user.assert_called_once()
 
 
 class FakeActionEvent(EventBase):

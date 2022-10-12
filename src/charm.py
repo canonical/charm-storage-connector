@@ -139,7 +139,8 @@ class StorageConnectorCharm(CharmBase):
 
     def on_config_changed(self, event):
         """Config-changed event handler."""
-        nrpe_utils.update_nrpe_config(self.model.config)
+        if self._stored.nrpe_related:
+            nrpe_utils.update_nrpe_config(self.model.config)
 
     def render_config(self, event):
         """Render configuration templates upon config change."""
@@ -476,10 +477,6 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = MaintenanceStatus("Installing exporter")
         metrics_utils.install_exporter(self.model.resources)
 
-        self.unit.status = MaintenanceStatus("Installing nrpe scripts")
-        nrpe_utils.create_nagios_user()
-        nrpe_utils.update_nrpe_config(self.model.config)
-
         self._stored.nrpe_related = True
         self.unit.status = ActiveStatus("Unit is ready")
 
@@ -495,7 +492,6 @@ class StorageConnectorCharm(CharmBase):
 
         self.unit.status = MaintenanceStatus("Uninstalling nrpe scripts")
         nrpe_utils.unsync_nrpe_files()
-        nrpe_utils.remove_nagios_user()
 
         self._stored.nrpe_related = False
         self.unit.status = ActiveStatus("Unit is ready")
