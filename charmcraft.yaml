@@ -1,4 +1,8 @@
 type: charm
+parts:
+  charm:
+    prime:
+      - files
 bases:
   - build-on:
     - name: ubuntu

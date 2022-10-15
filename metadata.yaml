@@ -20,6 +20,9 @@ requires:
 provides:
     metrics-endpoint:
         interface: prometheus_scrape
+    nrpe-external-master:
+        interface: nrpe-external-master
+        scope: container
 resources:
     prometheus-iscsi-exporter:
         type: file

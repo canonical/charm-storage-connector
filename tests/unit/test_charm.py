@@ -38,6 +38,7 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.on.install.emit()
         self.assertFalse(self.harness.charm._stored.installed)
 
+    @patch("storage_connector.nrpe_utils.update_nrpe_config")
     @patch("charm.subprocess.check_call")
     @patch("charm.subprocess.getoutput")
     @patch("charm.utils.is_container")
@@ -56,7 +57,8 @@ class TestCharm(unittest.TestCase):
                               m_multipath_conf_path,
                               m_is_container,
                               m_getoutput,
-                              m_check_call):
+                              m_check_call,
+                              _):
         """Test installation."""
         m_is_container.return_value = False
         m_iscsi_conf_path.return_value = self.tmp_iscsi_conf_path
@@ -91,6 +93,7 @@ class TestCharm(unittest.TestCase):
         )
         self.assertTrue(self.harness.charm._stored.installed)
 
+    @patch("storage_connector.nrpe_utils.update_nrpe_config")
     @patch("charm.subprocess.getoutput")
     @patch("builtins.open", new_callable=mock_open)
     @patch("charm.utils.is_container")
@@ -105,7 +108,8 @@ class TestCharm(unittest.TestCase):
                                      m_multipath_conf_path,
                                      m_is_container,
                                      m_open,
-                                     m_getoutput):
+                                     m_getoutput,
+                                     _):
         """Test installation."""
         m_is_container.return_value = False
         m_iscsi_conf_path.return_value = self.tmp_iscsi_conf_path
@@ -163,27 +167,40 @@ class TestCharm(unittest.TestCase):
         m_check_call.assert_called_once_with(["systemctl", "reload", "multipathd"])
         self.assertEqual(action_event.results['success'], 'True')
 
-    @patch("storage_connector.metrics_utils.uninstall_multipath_status_cronjob")
-    @patch("storage_connector.metrics_utils.install_multipath_status_cronjob")
-    @patch("storage_connector.metrics_utils.uninstall_exporter_snap")
-    @patch("storage_connector.metrics_utils.install_exporter_snap")
+    @patch("storage_connector.metrics_utils.uninstall_exporter")
+    @patch("storage_connector.metrics_utils.install_exporter")
     def test_on_metrics_endpoint_handlers(
         self,
-        m_install_exporter_snap,
-        m_uninstall_exporter_snap,
-        m_install_multipath_status_cronjob,
-        m_uninstall_multipath_status_cronjob
+        m_install_exporter,
+        m_uninstall_exporter
     ):
         """Test the relation event handlers for metrics-endpoint."""
         rel_id = self.harness.add_relation("metrics-endpoint", "prometheus-k8s")
-        m_install_exporter_snap.assert_called_once_with(
+        m_install_exporter.assert_called_once_with(
             self.harness.charm.model.resources
         )
-        m_install_multipath_status_cronjob.assert_called_once()
 
         self.harness.remove_relation(rel_id)
-        m_uninstall_exporter_snap.assert_called_once()
-        m_uninstall_multipath_status_cronjob.assert_called_once()
+        m_uninstall_exporter.assert_called_once()
+
+    @patch("storage_connector.metrics_utils.uninstall_exporter")
+    @patch("storage_connector.metrics_utils.install_exporter")
+    @patch("storage_connector.nrpe_utils.unsync_nrpe_files")
+    def test_on_nrpe_external_master_handlers(
+        self,
+        m_unsync_nrpe_files,
+        m_install_exporter,
+        m_uninstall_exporter,
+    ):
+        """Test the relation event handlers for nrpe-external-master."""
+        rel_id = self.harness.add_relation("nrpe-external-master", "nrpe")
+        m_install_exporter.assert_called_once_with(
+            self.harness.charm.model.resources
+        )
+
+        self.harness.remove_relation(rel_id)
+        m_uninstall_exporter.assert_called_once()
+        m_unsync_nrpe_files.assert_called_once()
 
 
 class FakeActionEvent(EventBase):

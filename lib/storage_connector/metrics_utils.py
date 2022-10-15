@@ -72,3 +72,15 @@ def uninstall_exporter_snap():
     """Uninstall the prometheus-iscsi-exporter snap."""
     logger.info("Removing snap")
     snap.remove(EXPORTER_SNAP_NAME)
+
+
+def install_exporter(resources):
+    """Install exporter and cronjob."""
+    install_exporter_snap(resources)
+    install_multipath_status_cronjob()
+
+
+def uninstall_exporter():
+    """Uninstall exporter and cronjob."""
+    uninstall_exporter_snap()
+    uninstall_multipath_status_cronjob()
