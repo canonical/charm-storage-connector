@@ -1,4 +1,33 @@
-restart-iscsi-services:
-  description: "Restart iscsid and open-iscsi services"
+restart-services:
+  description: |
+      Restart services managed by the charm.
+  params:
+    deferred-only:
+      type: boolean
+      default: false
+      description: |
+        Restart all deferred services. To check which services has been deferred,
+        run the `show-deferred-events` action.
+        NOTE: deferred-only and services params are mutually exclusive. Providing
+        both options will cause the action to fail.
+    services:
+      type: string
+      default: ""
+      description: |
+        List of services to restart. Supporting services includes iscsi,
+        open-iscsi, and multipathd.
+        This param accepts space-separated services in string format,
+        e.g. "iscsid open-iscsi"
+        NOTE: deferred-only and services params are mutually exclusive. Providing
+        both options will cause the action to fail.
+show-deferred-restarts:
+  descrpition: |
+    Show the outstanding service restarts
 reload-multipathd-service:
-  description: "Reload multipathd service"
+  description: |
+    Reload multipathd service
+iscsi-discovery-and-login:
+  description: |
+    Run discovery and login against iscsi target. This action is needed when
+    changes are made to iscsi configuration and the iscsi services
+    are restarted to apply these changes.
