@@ -228,8 +228,10 @@ class TestCharm(unittest.TestCase):
             action_event.results['failed'], 'No valid services are specified.')
 
     @patch("charm.subprocess.check_call")
-    def test_on_restart_services_actionservices_success(self,
-                                                        m_check_call):
+    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
+    def test_on_restart_services_action_services_success(self,
+                                                         m_iscsi_discovery_and_login,
+                                                         m_check_call):
         """Test on restart servcices action successfully run with services param."""
         action_event = FakeActionEvent(params={
             "deferred-only": False, "services": "iscsid open-iscsi multipathd"})
@@ -243,6 +245,7 @@ class TestCharm(unittest.TestCase):
             any_order=True
         )
         self.assertEqual(action_event.results['success'], 'True')
+        m_iscsi_discovery_and_login.assert_called_once()
 
     @patch("charm.deferred_events.get_deferred_restarts")
     def test_on_show_deferred_restarts_action(self, m_get_deferred_restarts):
@@ -369,6 +372,57 @@ class TestCharm(unittest.TestCase):
             ],
             any_order=False
         )
+
+    @patch("charm.subprocess.check_call")
+    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
+    def test_on_restart_non_iscsi_services(self,
+                                           m_iscsi_discovery_and_login,
+                                           m_check_call):
+        """Test on restart non-iscsi servcices function."""
+        self.harness.charm._restart_services(services=["multipathd"])
+        m_check_call.assert_has_calls(
+            [
+                call(["systemctl", "restart", "multipathd"])
+            ],
+            any_order=True
+        )
+        m_iscsi_discovery_and_login.assert_not_called()
+
+    @patch("charm.subprocess.check_call")
+    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
+    def test_on_restart_iscsi_services_with_discovery_login(
+        self,
+        m_iscsi_discovery_and_login,
+        m_check_call
+    ):
+        """Test on restart a iscsi servcice with running discovery and login."""
+        self.harness.charm._restart_services(services=["iscsid"])
+        self.harness.update_config({'iscsi-discovery-and-login': True})
+        m_check_call.assert_has_calls(
+            [
+                call(["systemctl", "restart", "iscsid"])
+            ],
+            any_order=True
+        )
+        m_iscsi_discovery_and_login.assert_called_once()
+
+    @patch("charm.subprocess.check_call")
+    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
+    def test_on_restart_iscsi_services_without_discovery_login(
+        self,
+        m_iscsi_discovery_and_login,
+        m_check_call
+    ):
+        """Test on restart a iscsi servcice without running discovery and login."""
+        self.harness.charm._restart_services(services=["iscsid"])
+        self.harness.update_config({'iscsi-discovery-and-login': False})
+        m_check_call.assert_has_calls(
+            [
+                call(["systemctl", "restart", "iscsid"])
+            ],
+            any_order=True
+        )
+        m_iscsi_discovery_and_login.assert_called_once()
 
     @patch("charm.subprocess.check_output")
     @patch("charm.subprocess.check_call")

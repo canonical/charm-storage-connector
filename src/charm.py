@@ -351,7 +351,14 @@ class StorageConnectorCharm(CharmBase):
                 except subprocess.CalledProcessError:
                     logging.exception('An error occured while restarting %s.', service)
 
+            # Clear deferred restart events
             deferred_events.clear_deferred_restarts(services)
+
+            # If any iscsi services restarted and iscsi-discovery-and-login config is
+            # set to true, run iscsiadm discovery and login.
+            if (len(set(services).intersection(self.ISCSI_SERVICES)) and
+                    self.model.config.get('iscsi-discovery-and-login')):
+                self._iscsi_discovery_and_login()
 
     def _reload_multipathd_service(self):
         """Reload multipathd service."""
@@ -374,8 +381,6 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         if charm_config.get('enable-auto-restarts') or not self._stored.started:
             self._restart_services(services=self.ISCSI_SERVICES)
-            if charm_config.get('iscsi-discovery-and-login'):
-                self._iscsi_discovery_and_login()
         else:
             self._defer_service_restart(
                 services=self.ISCSI_SERVICES,

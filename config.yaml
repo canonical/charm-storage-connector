@@ -21,10 +21,11 @@ options:
         type: boolean
         default: True
         description: |
-            If set to True (default) and storage-type is iscsi, the charm will configure
-            the iscsid and multipath configuration files, and then run an iscsiadm
-            discovery and login against the target. If set to False, the charm will simply
-            configure the unit but not run the discovery and login against the target.
+            If set to True (default) and storage-type is iscsi, the charm will run an
+            iscsiadm discovery and login against target after charm-managed iscsi services
+            restarts (triggered by either config changes or by the restart-services action).
+            If set to False, the charm will not automatically run the discovery and login
+            against the target.
     initiator-dictionary:
         type: string
         default: '{}'
