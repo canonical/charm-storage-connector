@@ -356,7 +356,7 @@ class StorageConnectorCharm(CharmBase):
 
             # If any iscsi services restarted and iscsi-discovery-and-login config is
             # set to true, run iscsiadm discovery and login.
-            if (len(set(services).intersection(self.ISCSI_SERVICES)) and
+            if (any(svc in self.ISCSI_SERVICES for svc in services) and
                     self.model.config.get('iscsi-discovery-and-login')):
                 self._iscsi_discovery_and_login()
 
@@ -366,9 +366,6 @@ class StorageConnectorCharm(CharmBase):
         try:
             subprocess.check_call(['systemctl', 'reload', self.MULTIPATHD_SERVICE])
         except subprocess.CalledProcessError:
-            self.unit.status = BlockedStatus(
-                "An error occured while reloading the multipathd service."
-            )
             logging.exception(
                 '%s',
                 "An error occured while reloading the multipathd service."
@@ -538,9 +535,6 @@ class StorageConnectorCharm(CharmBase):
                                   '-p', target + ':' + port])
         except subprocess.CalledProcessError:
             logging.exception('Iscsi discovery failed.')
-            self.unit.status = BlockedStatus(
-                'Iscsi discovery failed against target'
-            )
             return
 
         try:
@@ -549,13 +543,6 @@ class StorageConnectorCharm(CharmBase):
                 stderr=subprocess.STDOUT)
         except subprocess.CalledProcessError as err:
             logging.exception('Iscsi login failed. \n%s', err.output.decode("utf-8"))
-
-            # Check if exception occurred because session already present.
-            # No error if it is, otherwise set block status.
-            if "already present" not in err.output.decode("utf-8"):
-                self.unit.status = BlockedStatus(
-                    'Iscsi login failed against target'
-                )
 
     def _fc_scan_host(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/scsi_host')

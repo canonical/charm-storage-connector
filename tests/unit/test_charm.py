@@ -13,7 +13,7 @@ import charm
 import charmhelpers.contrib.openstack.deferred_events as deferred_events
 
 from ops.framework import EventBase
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus
 from ops.testing import Harness
 
 
@@ -378,7 +378,7 @@ class TestCharm(unittest.TestCase):
     def test_on_restart_non_iscsi_services(self,
                                            m_iscsi_discovery_and_login,
                                            m_check_call):
-        """Test on restart non-iscsi servcices function."""
+        """Test on restarting non-iscsi services."""
         self.harness.charm._restart_services(services=["multipathd"])
         m_check_call.assert_has_calls(
             [
@@ -395,9 +395,9 @@ class TestCharm(unittest.TestCase):
         m_iscsi_discovery_and_login,
         m_check_call
     ):
-        """Test on restart a iscsi servcice with running discovery and login."""
-        self.harness.charm._restart_services(services=["iscsid"])
+        """Test on restarting a iscsi service with discovery and login."""
         self.harness.update_config({'iscsi-discovery-and-login': True})
+        self.harness.charm._restart_services(services=["iscsid"])
         m_check_call.assert_has_calls(
             [
                 call(["systemctl", "restart", "iscsid"])
@@ -413,20 +413,24 @@ class TestCharm(unittest.TestCase):
         m_iscsi_discovery_and_login,
         m_check_call
     ):
-        """Test on restart a iscsi servcice without running discovery and login."""
-        self.harness.charm._restart_services(services=["iscsid"])
+        """Test on restarting a iscsi service without running discovery and login."""
         self.harness.update_config({'iscsi-discovery-and-login': False})
+        self.harness.charm._restart_services(services=["iscsid"])
         m_check_call.assert_has_calls(
             [
                 call(["systemctl", "restart", "iscsid"])
             ],
             any_order=True
         )
-        m_iscsi_discovery_and_login.assert_called_once()
+        m_iscsi_discovery_and_login.assert_not_called()
 
     @patch("charm.subprocess.check_output")
     @patch("charm.subprocess.check_call")
-    def test_iscsiadm_discovery_failed(self, m_check_call, m_check_output):
+    @patch("charm.logging.exception")
+    def test_iscsiadm_discovery_failed(self,
+                                       m_log_exception,
+                                       m_check_call,
+                                       m_check_output):
         """Test response to iscsiadm discovery failure."""
         self.harness.update_config({
             "storage-type": "iscsi",
@@ -440,14 +444,15 @@ class TestCharm(unittest.TestCase):
                  '-p', "abc" + ':' + "443"],
         )
         self.harness.charm._iscsi_discovery_and_login()
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            BlockedStatus('Iscsi discovery failed against target')
-        )
+        m_log_exception.assert_called_once()
 
     @patch("charm.subprocess.check_output")
     @patch("charm.subprocess.check_call")
-    def test_iscsiadm_login_failed(self, m_check_call, m_check_output):
+    @patch("charm.logging.exception")
+    def test_iscsiadm_login_failed(self,
+                                   m_log_exception,
+                                   m_check_call,
+                                   m_check_output):
         """Test response to iscsiadm login failure."""
         self.harness.update_config({
             "storage-type": "iscsi",
@@ -461,33 +466,7 @@ class TestCharm(unittest.TestCase):
             output=b'iscsiadm: Could not log into all portals'
         )
         self.harness.charm._iscsi_discovery_and_login()
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            BlockedStatus('Iscsi login failed against target')
-        )
-
-    @patch("charm.subprocess.check_output")
-    @patch("charm.subprocess.check_call")
-    def test_iscsiadm_login_exist_session(self, m_check_call, m_check_output):
-        """Test response to iscsiadm login to exist session."""
-        self.harness.update_config({
-            "storage-type": "iscsi",
-            "iscsi-target": "abc",
-            "iscsi-port": "443"
-        })
-        self.harness.charm.unit.status = ActiveStatus("Unit is ready")
-        m_check_output.side_effect = charm.subprocess.CalledProcessError(
-            returncode=15,
-            cmd=['iscsiadm', '-m', 'node', '--login'],
-            output=b'iscsiadm: default: 1 session requested, ' +
-                   b'but 1 already present.\n' +
-                   b'iscsiadm: Could not log into all portals'
-        )
-        self.harness.charm._iscsi_discovery_and_login()
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            ActiveStatus("Unit is ready")
-        )
+        m_log_exception.assert_called_once()
 
     @patch("storage_connector.metrics_utils.uninstall_exporter")
     @patch("storage_connector.metrics_utils.install_exporter")
