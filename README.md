@@ -2,10 +2,10 @@
 
 ## Overview
 
-This charm configures a unit to connect to a storage endpoint, either iSCSI or Fibre Channel. 
-It acts as a subordinate charm, which can be deployed on any bare metal or virtual machine, 
-alongside a main charm. It is not supported in containers due to lack of ability for lxd 
-containers to access iSCSI and Fibre Channel hardware of the underlying kernel. 
+This charm configures a unit to connect to a storage endpoint, either iSCSI or Fibre Channel.
+It acts as a subordinate charm, which can be deployed on any bare metal or virtual machine,
+alongside a main charm. It is not supported in containers due to lack of ability for lxd
+containers to access iSCSI and Fibre Channel hardware of the underlying kernel.
 
 If you configure this charm for iSCSI, this charm will:
 - Generate an iSCSI initiator name and put it in /etc/iscsi/initiatorname.iscsi
@@ -23,11 +23,11 @@ If you configure it for Fibre Channel, this charm will:
 - Configure multipath under /etc/multipath/conf.d directory
 - Reload and restart multipathd.service
 
-Please note that the Fiber Channel option currently supports only one device. 
+Please note that the Fiber Channel option currently supports only one device.
 
 If iSCSI, the user can input a initiator name dictionary in config.yaml if they wish to use a
 specific IQN for a specific unit. Also, the target IP and port are needed to perform
-the discovery and login with iscsiadm. 
+the discovery and login with iscsiadm.
 
 For Fibre Channel, the user can choose the device alias to be used when mapping the disk.
 See the option "fc-lun-alias" for further details.
@@ -85,9 +85,9 @@ juju relate ubuntu storage-connector
 
 ## Scaling
 
-This charm will scale with the units it is related to. For example, if you scale the 
-ubuntu application, and the storage-connector is related to it, it will be deployed on each 
-newly deployed ubuntu unit. 
+This charm will scale with the units it is related to. For example, if you scale the
+ubuntu application, and the storage-connector is related to it, it will be deployed on each
+newly deployed ubuntu unit.
 ```
 juju add-unit ubuntu
 juju remove-unit ubuntu/1
@@ -104,4 +104,3 @@ cause of the error.
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
  - Maintainers: BootStack Charmers <bootstack-charmers@lists.canonical.com>
  - Bug Tracker: [here](https://bugs.launchpad.net/charm-storage-connector)
- 
