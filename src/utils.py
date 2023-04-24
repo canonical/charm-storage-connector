@@ -16,9 +16,8 @@ def is_container():
         # Detect using systemd-detect-virt
         return subprocess.call(['systemd-detect-virt',
                                 '--container']) == 0
-    else:
-        # Detect using upstart container file marker
-        return os.path.exists(UPSTART_CONTAINER_TYPE)
+    # Detect using upstart container file marker
+    return os.path.exists(UPSTART_CONTAINER_TYPE)
 
 
 def init_is_systemd(service_name=None):

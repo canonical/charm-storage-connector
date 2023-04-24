@@ -15,24 +15,19 @@ from functools import wraps
 from pathlib import Path
 from typing import Any, Callable
 
-import apt
-
-import charmhelpers.contrib.openstack.deferred_events as deferred_events
-import charmhelpers.contrib.openstack.policy_rcd as policy_rcd
-
+import apt  # pylint: disable=import-error
+from charmhelpers.contrib.openstack import deferred_events, policy_rcd
 from jinja2 import Environment, FileSystemLoader
-
 from ops.charm import CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+import yaml
 
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider  # noqa
-
 from storage_connector import metrics_utils, nrpe_utils
 import utils  # noqa
 
-import yaml
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +56,7 @@ def check_deferred_restarts_queue(func: Callable) -> Callable:
             logging.error("Cannot retrieve services' start time: %s", err)
 
         if isinstance(self.unit.status, ActiveStatus):
-            self.unit.status = ActiveStatus(self._get_status_message())
+            self.unit.status = ActiveStatus(self.get_status_message())
 
         return result
 
@@ -230,18 +225,18 @@ class StorageConnectorCharm(CharmBase):
         logging.info("Setting started state")
         self._stored.started = True
         self._stored.configured = True
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
 
     def _on_start(self, event):
         """Handle start state."""
         if not self._stored.configured:
-            logging.warning("Start called before configuration complete, " +
+            logging.warning("Start called before configuration complete, "
                             "deferring event: %s", event.handle)
             self._defer_once(event)
             return
         self.unit.status = MaintenanceStatus("Starting charm software")
         # Start software
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
         self._stored.started = True
         logging.info("Started")
 
@@ -314,7 +309,7 @@ class StorageConnectorCharm(CharmBase):
         event.set_results({"success": "True"})
 
     # Additional functions
-    def _get_status_message(self):
+    def get_status_message(self):
         """Set unit status to active with correct status message.
 
         Check if any services need restarts. If yes, append the queue of
@@ -393,7 +388,7 @@ class StorageConnectorCharm(CharmBase):
                 # allow user to change storage type only if initial entry was incorrect
                 self._stored.storage_type = charm_config['storage-type'].lower()
                 logging.debug(
-                    "Storage type updated to {}".format(self._stored.storage_type)
+                    "Storage type updated to %s", self._stored.storage_type
                 )
             elif charm_config['storage-type'] != self._stored.storage_type:
                 self.unit.status = BlockedStatus(
@@ -420,8 +415,8 @@ class StorageConnectorCharm(CharmBase):
         notice_count = 0
         handle = str(event.handle)
 
-        for event_path, _, _ in self.framework._storage.notices(None):
-            if event_path.startswith(handle.split('[')[0]):
+        for event_path, _, _ in self.framework._storage.notices(None):  # pylint: disable=W0212
+            if event_path.startswith(handle.split('[', maxsplit=1)[0]):
                 notice_count += 1
                 logging.debug("Found event: %s x %d", event_path, notice_count)
 
@@ -456,7 +451,7 @@ class StorageConnectorCharm(CharmBase):
 
         if not initiator_name:
             initiator_name = subprocess.getoutput('/sbin/iscsi-iname')
-            logging.warning('The hostname was not found in the initiator dictionary!' +
+            logging.warning('The hostname was not found in the initiator dictionary! '
                             'The random iqn %s will be used for %s',
                             initiator_name, hostname)
 
@@ -491,21 +486,21 @@ class StorageConnectorCharm(CharmBase):
         for section in multipath_sections:
             config = charm_config.get('multipath-' + section)
             if config:
-                logging.info("Gather information for the multipaths section " + section)
-                logging.debug("multipath-" + section + " data: " + str(config))
+                logging.info("Gather information for the multipaths section %s", section)
+                logging.debug("multipath-%s data: %s", section, config)
                 try:
                     ctxt[section] = json.loads(config)
-                except Exception as e:
+                except json.JSONDecodeError as exception:
                     logging.info("An exception has occured. Please verify the format \
-                                 of the multipath config option %s. \
-                                Traceback: %s", section, e)
+                                  of the multipath config option %s. \
+                                  Traceback: %s", section, exception)
                     self.unit.status = BlockedStatus(
                         "Exception occured during the multipath \
                         configuration. Please check logs."
                     )
                     return
             else:
-                logging.debug("multipath-" + section + " is empty.")
+                logging.debug("multipath-%s is empty.", section)
 
         if self._stored.storage_type == 'fc':
             wwid = self._retrieve_multipath_wwid()
@@ -546,7 +541,7 @@ class StorageConnectorCharm(CharmBase):
 
     def _fc_scan_host(self):
         hba_adapters = subprocess.getoutput('ls /sys/class/scsi_host')
-        logging.debug('hba_adapters: {}'.format(hba_adapters))
+        logging.debug('hba_adapters: %s', hba_adapters)
         if not hba_adapters:
             logging.info('No scsi devices were found. Scan aborted')
             self.unit.status = BlockedStatus(
@@ -558,10 +553,9 @@ class StorageConnectorCharm(CharmBase):
             try:
                 logging.info('Running scan of the host to discover LUN devices.')
                 file_name = '/sys/class/scsi_host/' + adapter + '/scan'
-                with open(file_name, "w") as f:
-                    f.write("- - -")
-
-            except Exception:
+                with open(file_name, "w", encoding="utf-8") as file:
+                    file.write("- - -")
+            except OSError:
                 logging.exception('An error occured during the scan of the hosts.')
                 self.unit.status = BlockedStatus(
                     'Scan of the HBA adapters failed on the host.'
@@ -573,16 +567,15 @@ class StorageConnectorCharm(CharmBase):
         logging.info('Retrive device WWID via multipath -ll')
         result = subprocess.getoutput(['multipath -ll'])
         wwid = re.findall(r'\(([\d\w]+)\)', result)
-        logging.info("WWID is {}".format(wwid))
-        if wwid:
-            return wwid[0]
+        logging.info("WWID is %s", wwid)
+        return wwid[0] if wwid else None
 
     def _validate_multipath_config(self):
         result = subprocess.getoutput(['multipath -ll'])
         error = re.findall(r'(invalid\skeyword:\s\w+)', result)
         if error:
-            logging.info('Configuration is probably malformed. \
-                         See output below {}', result)
+            logging.info('Configuration is probably malformed. '
+                         'See output below %s', result)
             self.unit.status = BlockedStatus(
                 'Multipath conf error: {}', error
             )
@@ -615,36 +608,36 @@ class StorageConnectorCharm(CharmBase):
             for svc in self.DEFERRED_SERVICES:
                 policy_rcd.add_policy_block(svc, blocked_actions)
 
-    def _on_metrics_endpoint_relation_created(self, event):
+    def _on_metrics_endpoint_relation_created(self, event):  # pylint: disable=unused-argument
         """Relation-created event handler for metrics-endpoint."""
         self.unit.status = MaintenanceStatus("Installing exporter")
         metrics_utils.install_exporter(self.model.resources)
 
         self._stored.prometheus_related = True
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
 
-    def _on_metrics_endpoint_relation_broken(self, event):
+    def _on_metrics_endpoint_relation_broken(self, event):  # pylint: disable=unused-argument
         """Relation-broken event handler for metrics-endpoint."""
         if not self._stored.nrpe_related:
             self.unit.status = MaintenanceStatus("Removing exporter")
             metrics_utils.uninstall_exporter()
 
         self._stored.prometheus_related = False
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
 
-    def _on_nrpe_external_master_relation_created(self, event):
+    def _on_nrpe_external_master_relation_created(self, event):  # pylint: disable=unused-argument
         """Relation-created event handler for nrpe-external-master."""
         self.unit.status = MaintenanceStatus("Installing exporter")
         metrics_utils.install_exporter(self.model.resources)
 
         self._stored.nrpe_related = True
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
 
-    def _on_nrpe_external_master_relation_changed(self, event):
+    def _on_nrpe_external_master_relation_changed(self, event):  # pylint: disable=unused-argument
         """Relation-changed event handler for nrpe-external-master."""
         nrpe_utils.update_nrpe_config(self.model.config)
 
-    def _on_nrpe_external_master_relation_broken(self, event):
+    def _on_nrpe_external_master_relation_broken(self, event):  # pylint: disable=unused-argument
         """Relation-broken event handler for nrpe-external-master."""
         if not self._stored.prometheus_related:
             self.unit.status = MaintenanceStatus("Removing exporter software")
@@ -654,7 +647,7 @@ class StorageConnectorCharm(CharmBase):
         nrpe_utils.unsync_nrpe_files()
 
         self._stored.nrpe_related = False
-        self.unit.status = ActiveStatus(self._get_status_message())
+        self.unit.status = ActiveStatus(self.get_status_message())
 
 
 if __name__ == "__main__":

@@ -143,7 +143,7 @@ class TestCharm(unittest.TestCase):
         self.assertFalse(os.path.exists(self.harness.charm.ISCSI_CONF))
         self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF_PATH))
         self.assertTrue(self.harness.charm._stored.installed)
-        m_open.assert_called_once_with("/sys/class/scsi_host/host0/scan", "w")
+        m_open.assert_called_once_with("/sys/class/scsi_host/host0/scan", "w", encoding="utf-8")
         m_configure_deferred_restarts.assert_called_once()
         self.assertTrue(
             call(self.harness.charm.ISCSI_CONF, "w") not in m_open.mock_calls
@@ -303,7 +303,7 @@ class TestCharm(unittest.TestCase):
     def test_get_status_message(self, m_get_deferred_restarts):
         """Test on setting active status with correct status message."""
         m_get_deferred_restarts.return_value = []
-        self.assertEqual(self.harness.charm._get_status_message(), "Unit is ready")
+        self.assertEqual(self.harness.charm.get_status_message(), "Unit is ready")
 
         m_get_deferred_restarts.return_value = [deferred_events.ServiceEvent(
             timestamp=123456,
@@ -319,7 +319,7 @@ class TestCharm(unittest.TestCase):
             policy_requestor_name='storage-connector',
             policy_requestor_type='charm')]
         self.assertEqual(
-            self.harness.charm._get_status_message(),
+            self.harness.charm.get_status_message(),
             "Unit is ready. Services queued for restart: svc2"
         )
 

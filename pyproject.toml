@@ -47,6 +47,9 @@ ignore-paths = [
   "report",
   "tests",
 ]
+disable = [
+  "C0209",  # consider-using-f-string
+]
 
 [tool.mypy]
 warn_unused_ignores = true
