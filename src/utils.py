@@ -2,12 +2,13 @@
 
 import os
 import subprocess
+from typing import Optional
 
 SYSTEMD_SYSTEM = '/run/systemd/system'
 UPSTART_CONTAINER_TYPE = '/run/container_type'
 
 
-def is_container():
+def is_container() -> bool:
     """Determine whether unit is running in a container.
 
     @return: boolean indicating if unit is in a container
@@ -20,7 +21,7 @@ def is_container():
     return os.path.exists(UPSTART_CONTAINER_TYPE)
 
 
-def init_is_systemd(service_name=None):
+def init_is_systemd(service_name: Optional[str] = None) -> bool:
     """Return whether the host uses systemd for the specified service.
 
     @param Optional[str] service_name: specific name of service

@@ -9,8 +9,10 @@
 import re
 import subprocess
 import sys
-from argparse import ArgumentParser
+from argparse import ArgumentParser, Namespace
+from typing import Dict, List
 from urllib.request import urlopen
+
 
 NAGIOS_STATUS_OK = 0
 NAGIOS_STATUS_WARNING = 1
@@ -25,7 +27,7 @@ NAGIOS_STATUS = {
 }
 
 
-def get_metrics(name):
+def get_metrics(name: str) -> List[str]:
     """Get the metrics from the exporter."""
     with urlopen("http://127.0.0.1:9090/") as response:
         response = response.read().decode()
@@ -37,7 +39,7 @@ def get_metrics(name):
     return metrics
 
 
-def get_total_paths_per_alias(metrics):
+def get_total_paths_per_alias(metrics: List[str]) -> Dict[str, int]:
     """Get the total paths per alias.
 
     Each line of metrics coming from the exporter are of the following form:
@@ -55,7 +57,7 @@ def get_total_paths_per_alias(metrics):
     return result
 
 
-def parse_args():
+def parse_args() -> Namespace:
     """Parse the command line."""
     parser = ArgumentParser(description="Check Multipath status.")
     parser.add_argument(
@@ -68,7 +70,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
+def main() -> None:
     """Check multipath for correct number of paths per volume and alert."""
     args = parse_args()
     try:
