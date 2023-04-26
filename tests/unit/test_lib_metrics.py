@@ -3,7 +3,6 @@ from unittest import TestCase
 from unittest.mock import MagicMock, patch
 
 from ops.model import ModelError
-
 from storage_connector import metrics_utils
 
 
@@ -39,9 +38,7 @@ class TestMetricsUtils(TestCase):
 
     @patch("storage_connector.metrics_utils.CRON_SCRIPT_OUTPUT_PATH", "/test")
     @patch("storage_connector.metrics_utils.CRON_SCRIPT_PATH")
-    def test_install_multipath_status_cronjob(
-        self, mock_cron_script_path
-    ):
+    def test_install_multipath_status_cronjob(self, mock_cron_script_path):
         """Test the install_multipath_status_cronjob function."""
         mock_cron_script_path.return_value = MagicMock()
 
@@ -49,9 +46,7 @@ class TestMetricsUtils(TestCase):
         mock_cron_script_path.write_text.assert_called_once_with(
             "* * * * * root multipath -ll > /test\n"
         )
-        mock_cron_script_path.chmod.assert_called_once_with(
-            mode=0o644
-        )
+        mock_cron_script_path.chmod.assert_called_once_with(mode=0o644)
 
     @patch("storage_connector.metrics_utils.CRON_SCRIPT_OUTPUT_PATH")
     @patch("storage_connector.metrics_utils.CRON_SCRIPT_PATH")
@@ -63,12 +58,8 @@ class TestMetricsUtils(TestCase):
         mock_cron_script_path.return_value = MagicMock()
 
         metrics_utils.uninstall_multipath_status_cronjob()
-        mock_cron_script_path.unlink.assert_called_once_with(
-            missing_ok=True
-        )
-        mock_cron_script_output_path.unlink.assert_called_once_with(
-            missing_ok=True
-        )
+        mock_cron_script_path.unlink.assert_called_once_with(missing_ok=True)
+        mock_cron_script_output_path.unlink.assert_called_once_with(missing_ok=True)
 
     @patch("storage_connector.metrics_utils.install_multipath_status_cronjob")
     @patch("storage_connector.metrics_utils.install_exporter_snap")

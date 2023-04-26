@@ -1,4 +1,3 @@
-
 """Init mocking for unit tests."""
 
 import sys
@@ -8,7 +7,7 @@ from ops import testing
 
 testing.SIMULATE_CAN_CONNECT = True
 
-sys.path.append('src')
+sys.path.append("src")
 
 apt = mock.MagicMock()
-sys.modules['apt'] = apt
+sys.modules["apt"] = apt

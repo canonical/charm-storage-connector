@@ -13,7 +13,6 @@ from argparse import ArgumentParser, Namespace
 from typing import Dict, List
 from urllib.request import urlopen
 
-
 NAGIOS_STATUS_OK = 0
 NAGIOS_STATUS_WARNING = 1
 NAGIOS_STATUS_CRITICAL = 2
@@ -74,9 +73,7 @@ def main() -> None:
     """Check multipath for correct number of paths per volume and alert."""
     args = parse_args()
     try:
-        output = get_total_paths_per_alias(
-            get_metrics("iscsi_multipath_path_total")
-        )
+        output = get_total_paths_per_alias(get_metrics("iscsi_multipath_path_total"))
         for alias, num_paths in output.items():
             if num_paths != args.expected_num:
                 message = "Expected {} paths for {} but found {}.".format(
@@ -89,7 +86,10 @@ def main() -> None:
         sys.exit(NAGIOS_STATUS_OK)
 
     except (
-        RuntimeError, FileNotFoundError, PermissionError, subprocess.CalledProcessError
+        RuntimeError,
+        FileNotFoundError,
+        PermissionError,
+        subprocess.CalledProcessError,
     ) as error:
         print(f"{NAGIOS_STATUS[NAGIOS_STATUS_CRITICAL]}: {str(error)}")
         sys.exit(NAGIOS_STATUS_CRITICAL)
