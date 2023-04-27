@@ -1,195 +1,128 @@
 """Unit tests for ISCSI Connector charm."""
-
-import os
-import shutil
-import tempfile
-import unittest
-from pathlib import Path
-from unittest.mock import PropertyMock, call, mock_open, patch
+from unittest.mock import call, mock_open
 
 import charmhelpers.contrib.openstack.deferred_events as deferred_events
 from ops.framework import EventBase
 from ops.model import ActiveStatus
-from ops.testing import Harness
 
 import charm
 
 
-class TestCharm(unittest.TestCase):
-    """Charm Unit Tests."""
+def test_abort_if_host_is_container(harness, mocker):
+    """Test if charm stops when deployed on a container."""
+    mocker.patch("charm.utils.is_container", return_value=True)
+    harness.begin_with_initial_hooks()
+    assert not harness.charm._stored.installed
 
-    def setUp(self):
-        """Test setup."""
-        self.tmp_iscsi_conf_path = Path(tempfile.mkdtemp())
-        self.tmp_multipath_conf_dir = Path(tempfile.mkdtemp())
-        self.harness = Harness(charm.StorageConnectorCharm)
-        self.harness.set_leader(is_leader=True)
-        self.harness.begin()
 
-    def tearDown(self):
-        """Remove testing artifacts."""
-        shutil.rmtree(self.tmp_iscsi_conf_path)
-        shutil.rmtree(self.tmp_multipath_conf_dir)
+def test_on_iscsi_install(harness, mocker):
+    """Test installation."""
+    mocker.patch("charm.utils.is_container", return_value=False)
+    mock_getoutput = mocker.patch(
+        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
+    )
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_check_output = mocker.patch("charm.subprocess.check_output")
+    mock_configure_deferred_restarts = mocker.patch(
+        "charm.StorageConnectorCharm._configure_deferred_restarts"
+    )
+    harness.update_config(
+        {
+            "storage-type": "iscsi",
+            "iscsi-target": "abc",
+            "iscsi-port": "443",
+            "multipath-devices": "{'a': 'b'}",
+        }
+    )
+    harness.begin_with_initial_hooks()
 
-    @patch("charm.utils.is_container")
-    def test_abort_if_host_is_container(self, m_is_container):
-        """Test if charm stops when deployed on a container."""
-        m_is_container.return_value = True
-        self.assertFalse(self.harness.charm._stored.installed)
-        self.harness.charm.on.install.emit()
-        self.assertFalse(self.harness.charm._stored.installed)
+    assert harness.charm.ISCSI_CONF.is_file()
+    assert harness.charm.MULTIPATH_CONF_PATH.is_dir()
+    mock_getoutput.assert_any_call("/sbin/iscsi-iname")
+    mock_check_call.assert_has_calls(
+        [
+            call("systemctl restart iscsid".split()),
+            call("systemctl restart open-iscsi".split()),
+            call("iscsiadm -m discovery -t sendtargets -p abc:443".split()),
+        ],
+        any_order=False,
+    )
+    mock_check_output.assert_has_calls(
+        [call("iscsiadm -m node --login".split(), stderr=-2)], any_order=False
+    )
+    mock_configure_deferred_restarts.assert_called_once()
+    assert harness.charm._stored.installed
 
-    @patch("storage_connector.nrpe_utils.update_nrpe_config")
-    @patch("charm.subprocess.check_call")
-    @patch("charm.subprocess.check_output")
-    @patch("charm.subprocess.getoutput")
-    @patch("charm.utils.is_container")
-    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_PATH", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_DIR", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.ISCSI_INITIATOR_NAME", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.ISCSI_CONF", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.ISCSI_CONF_PATH", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm._configure_deferred_restarts")
-    def test_on_iscsi_install(
-        self,
-        m_configure_deferred_restarts,
-        m_iscsi_conf_path,
-        m_iscsi_conf,
-        m_iscsi_initiator_name,
-        m_multipath_conf_dir,
-        m_multipath_conf_path,
-        m_is_container,
-        m_getoutput,
-        m_check_output,
-        m_check_call,
-        _,
-    ):
-        """Test installation."""
-        m_is_container.return_value = False
-        m_iscsi_conf_path.return_value = self.tmp_iscsi_conf_path
-        m_iscsi_conf.return_value = self.tmp_iscsi_conf_path / "iscsid.conf"
-        m_iscsi_initiator_name.return_value = self.tmp_iscsi_conf_path / "initiatorname.iscsi"
-        m_multipath_conf_dir.return_value = self.tmp_multipath_conf_dir
-        m_multipath_conf_path.return_value = self.tmp_multipath_conf_dir / "conf.d"
-        m_getoutput.return_value = "iqn.2020-07.canonical.com:lun1"
 
-        self.harness.update_config(
-            {
-                "storage-type": "iscsi",
-                "iscsi-target": "abc",
-                "iscsi-port": "443",
-                "multipath-devices": "{'a': 'b'}",
-            }
-        )
+def test_on_fiberchannel_install(harness, mocker):
+    """Test installation."""
+    mocker.patch("charm.utils.is_container", return_value=False)
+    mock_configure_deferred_restarts = mocker.patch(
+        "charm.StorageConnectorCharm._configure_deferred_restarts"
+    )
+    mocker.patch("charm.subprocess.getoutput", return_value="host0")
+    mock_builtin_open = mocker.patch("builtins.open", new_callable=mock_open)
+    harness.update_config(
+        {"storage-type": "fc", "fc-lun-alias": "data1", "multipath-devices": "{'a': 'b'}"}
+    )
+    harness.begin_with_initial_hooks()
 
-        self.assertFalse(self.harness.charm._stored.installed)
-        self.harness.charm.on.install.emit()
+    assert not harness.charm.ISCSI_CONF.exists()
+    assert harness.charm.MULTIPATH_CONF_PATH.is_dir()
+    assert harness.charm._stored.installed
+    mock_builtin_open.assert_called_once_with(
+        "/sys/class/scsi_host/host0/scan", "w", encoding="utf-8"
+    )
+    mock_configure_deferred_restarts.assert_called_once()
+    assert call(harness.charm.ISCSI_CONF, "w") not in mock_builtin_open.mock_calls
 
-        self.assertTrue(os.path.exists(self.harness.charm.ISCSI_CONF))
-        self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF_PATH))
-        m_getoutput.assert_called_with("/sbin/iscsi-iname")
-        m_check_call.assert_has_calls(
-            [
-                call("systemctl restart iscsid".split()),
-                call("systemctl restart open-iscsi".split()),
-                call("iscsiadm -m discovery -t sendtargets -p abc:443".split()),
-            ],
-            any_order=False,
-        )
-        m_check_output.assert_has_calls(
-            [call("iscsiadm -m node --login".split(), stderr=-2)], any_order=False
-        )
-        m_configure_deferred_restarts.assert_called_once()
-        self.assertTrue(self.harness.charm._stored.installed)
 
-    @patch("storage_connector.nrpe_utils.update_nrpe_config")
-    @patch("charm.subprocess.getoutput")
-    @patch("builtins.open", new_callable=mock_open)
-    @patch("charm.utils.is_container")
-    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_PATH", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.MULTIPATH_CONF_DIR", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.ISCSI_CONF", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm.ISCSI_CONF_PATH", new_callable=PropertyMock)
-    @patch("charm.StorageConnectorCharm._configure_deferred_restarts")
-    def test_on_fiberchannel_install(
-        self,
-        m_configure_deferred_restarts,
-        m_iscsi_conf_path,
-        m_iscsi_conf,
-        m_multipath_conf_dir,
-        m_multipath_conf_path,
-        m_is_container,
-        m_open,
-        m_getoutput,
-        _,
-    ):
-        """Test installation."""
-        m_is_container.return_value = False
-        m_iscsi_conf_path.return_value = self.tmp_iscsi_conf_path
-        m_iscsi_conf.return_value = self.tmp_iscsi_conf_path / "fc-iscsid.conf"
-        m_multipath_conf_dir.return_value = self.tmp_multipath_conf_dir
-        m_multipath_conf_path.return_value = self.tmp_multipath_conf_dir / "conf.d"
-        m_getoutput.return_value = "host0"
-        self.harness.update_config(
-            {"storage-type": "fc", "fc-lun-alias": "data1", "multipath-devices": "{'a': 'b'}"}
-        )
+def test_on_start(harness):
+    """Test on start hook."""
+    harness.begin()
+    assert not harness.charm._stored.started
+    harness.charm.on.start.emit()
+    # event deferred as charm not configured yet
+    assert not harness.charm._stored.started
+    # mock charm as configured
+    harness.charm._stored.configured = True
+    harness.charm.on.start.emit()
+    assert harness.charm._stored.started
 
-        self.assertFalse(self.harness.charm._stored.installed)
-        self.harness.charm.on.install.emit()
-        self.assertFalse(os.path.exists(self.harness.charm.ISCSI_CONF))
-        self.assertTrue(os.path.exists(self.harness.charm.MULTIPATH_CONF_PATH))
-        self.assertTrue(self.harness.charm._stored.installed)
-        m_open.assert_called_once_with("/sys/class/scsi_host/host0/scan", "w", encoding="utf-8")
-        m_configure_deferred_restarts.assert_called_once()
-        self.assertTrue(call(self.harness.charm.ISCSI_CONF, "w") not in m_open.mock_calls)
 
-    def test_on_start(self):
-        """Test on start hook."""
-        self.assertFalse(self.harness.charm._stored.started)
-        self.harness.charm.on.start.emit()
-        # event deferred as charm not configured yet
-        self.assertFalse(self.harness.charm._stored.started)
-        # mock charm as configured
-        self.harness.charm._stored.configured = True
-        self.harness.charm.on.start.emit()
-        self.assertTrue(self.harness.charm._stored.started)
+def test_on_restart_services_action_mutually_exclusive_params(harness):
+    """Test on restart servcices action with both deferred-only and services."""
+    action_event = FakeActionEvent(params={"deferred-only": True, "services": "test_service"})
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    assert action_event.results["failed"] == "deferred-only and services are mutually exclusive"
 
-    def test_on_restart_services_action_mutually_exclusive_params(self):
-        """Test on restart servcices action with both deferred-only and services."""
-        action_event = FakeActionEvent(params={"deferred-only": True, "services": "test_service"})
-        self.harness.charm._on_restart_services_action(action_event)
-        self.assertEqual(
-            action_event.results["failed"], "deferred-only and services are mutually exclusive"
-        )
 
-    def test_on_restart_services_action_no_params(self):
-        """Test on restart servcices action with no param."""
-        action_event = FakeActionEvent(params={"deferred-only": False, "services": ""})
-        self.harness.charm._on_restart_services_action(action_event)
-        self.assertEqual(
-            action_event.results["failed"], "Please specify either deferred-only or services"
-        )
+def test_on_restart_services_action_no_params(harness):
+    """Test on restart servcices action with no param."""
+    action_event = FakeActionEvent(params={"deferred-only": False, "services": ""})
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    assert action_event.results["failed"] == "Please specify either deferred-only or services"
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.deferred_events.get_deferred_restarts")
-    @patch("charm.deferred_events.check_restart_timestamps")
-    def test_on_restart_services_action_deferred_only_failed(
-        self, m_check_rtimestamps, m_get_deferred_restarts, m_check_call
-    ):
-        """Test on restart servcices action empty list of deferred restarts."""
-        m_get_deferred_restarts.return_value = []
-        action_event = FakeActionEvent(params={"deferred-only": True, "services": ""})
-        self.harness.charm._on_restart_services_action(action_event)
-        self.assertEqual(action_event.results["failed"], "No deferred services to restart")
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.deferred_events.get_deferred_restarts")
-    @patch("charm.deferred_events.check_restart_timestamps")
-    def test_on_restart_services_action_deferred_only_success(
-        self, m_check_rtimestamps, m_get_deferred_restarts, m_check_call
-    ):
-        """Test on restart servcices action with deferred only param."""
-        m_get_deferred_restarts.return_value = [
+def test_on_restart_services_action_deferred_only_failed(harness, mocker):
+    """Test on restart servcices action empty list of deferred restarts."""
+    mocker.patch("charm.subprocess.check_call")
+    mocker.patch("charm.deferred_events.get_deferred_restarts", return_value=[])
+    action_event = FakeActionEvent(params={"deferred-only": True, "services": ""})
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    assert action_event.results["failed"] == "No deferred services to restart"
+
+
+def test_on_restart_services_action_deferred_only_success(harness, mocker):
+    """Test on restart servcices action with deferred only param."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mocker.patch("charm.deferred_events.check_restart_timestamps")
+    mocker.patch(
+        "charm.deferred_events.get_deferred_restarts",
+        return_value=[
             deferred_events.ServiceEvent(
                 timestamp=123456,
                 service="svc",
@@ -198,45 +131,53 @@ class TestCharm(unittest.TestCase):
                 policy_requestor_name="myapp",
                 policy_requestor_type="charm",
             )
-        ]
-        action_event = FakeActionEvent(params={"deferred-only": True, "services": ""})
-        self.harness.charm._on_restart_services_action(action_event)
-        m_check_call.assert_has_calls([call(["systemctl", "restart", "svc"])], any_order=False)
-        self.assertEqual(action_event.results["success"], "True")
+        ],
+    )
+    action_event = FakeActionEvent(params={"deferred-only": True, "services": ""})
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    mock_check_call.assert_has_calls([call(["systemctl", "restart", "svc"])], any_order=False)
+    assert action_event.results["success"] == "True"
 
-    def test_on_restart_services_action_services_failed(self):
-        """Test on restart servcices action failed with invalid service input."""
-        action_event = FakeActionEvent(
-            params={"deferred-only": False, "services": "non_valid_service"}
-        )
-        self.harness.charm._on_restart_services_action(action_event)
-        self.assertEqual(action_event.results["failed"], "No valid services are specified.")
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
-    def test_on_restart_services_action_services_success(
-        self, m_iscsi_discovery_and_login, m_check_call
-    ):
-        """Test on restart servcices action successfully run with services param."""
-        action_event = FakeActionEvent(
-            params={"deferred-only": False, "services": "iscsid open-iscsi multipathd"}
-        )
-        self.harness.charm._on_restart_services_action(action_event)
-        m_check_call.assert_has_calls(
-            [
-                call(["systemctl", "restart", "iscsid"]),
-                call(["systemctl", "restart", "open-iscsi"]),
-                call(["systemctl", "restart", "multipathd"]),
-            ],
-            any_order=True,
-        )
-        self.assertEqual(action_event.results["success"], "True")
-        m_iscsi_discovery_and_login.assert_called_once()
+def test_on_restart_services_action_services_failed(harness):
+    """Test on restart servcices action failed with invalid service input."""
+    action_event = FakeActionEvent(
+        params={"deferred-only": False, "services": "non_valid_service"}
+    )
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    assert action_event.results["failed"] == "No valid services are specified."
 
-    @patch("charm.deferred_events.get_deferred_restarts")
-    def test_on_show_deferred_restarts_action(self, m_get_deferred_restarts):
-        """Test on show deferred restarts action."""
-        m_get_deferred_restarts.return_value = [
+
+def test_on_restart_services_action_services_success(harness, mocker):
+    """Test on restart servcices action successfully run with services param."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_iscsi_discovery_and_login = mocker.patch(
+        "charm.StorageConnectorCharm._iscsi_discovery_and_login"
+    )
+    action_event = FakeActionEvent(
+        params={"deferred-only": False, "services": "iscsid open-iscsi multipathd"}
+    )
+    harness.begin()
+    harness.charm._on_restart_services_action(action_event)
+    mock_check_call.assert_has_calls(
+        [
+            call(["systemctl", "restart", "iscsid"]),
+            call(["systemctl", "restart", "open-iscsi"]),
+            call(["systemctl", "restart", "multipathd"]),
+        ],
+        any_order=True,
+    )
+    assert action_event.results["success"] == "True"
+    mock_iscsi_discovery_and_login.assert_called_once()
+
+
+def test_on_show_deferred_restarts_action(harness, mocker):
+    """Test on show deferred restarts action."""
+    mocker.patch(
+        "charm.deferred_events.get_deferred_restarts",
+        return_value=[
             deferred_events.ServiceEvent(
                 timestamp=123456,
                 service="svc",
@@ -245,82 +186,84 @@ class TestCharm(unittest.TestCase):
                 policy_requestor_name="myapp",
                 policy_requestor_type="charm",
             )
-        ]
+        ],
+    )
+    action_event = FakeActionEvent()
+    harness.begin()
+    harness.charm._on_show_deferred_restarts_action(action_event)
+    assert (
+        action_event.results["deferred-restarts"]
+        == "- 1970-01-02 10:17:36 +0000 UTC svc" + "                                      Reason\n"
+    )
 
-        action_event = FakeActionEvent()
-        self.harness.charm._on_show_deferred_restarts_action(action_event)
-        self.assertEqual(
-            action_event.results["deferred-restarts"],
-            "- 1970-01-02 10:17:36 +0000 UTC svc"
-            + "                                      Reason\n",
-        )
 
-    @patch("charm.subprocess.check_call")
-    def test_on_reload_multipathd_service_action(self, m_check_call):
-        """Test on reload multipathd action."""
-        action_event = FakeActionEvent()
-        self.harness.charm._on_reload_multipathd_service_action(action_event)
-        m_check_call.assert_called_once_with(["systemctl", "reload", "multipathd"])
-        self.assertEqual(action_event.results["success"], "True")
+def test_on_reload_multipathd_service_action(harness, mocker):
+    """Test on reload multipathd action."""
+    action_event = FakeActionEvent()
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    harness.begin()
+    harness.charm._on_reload_multipathd_service_action(action_event)
+    mock_check_call.assert_called_once_with(["systemctl", "reload", "multipathd"])
+    assert action_event.results["success"] == "True"
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.subprocess.check_output")
-    def test_on_iscsi_discovery_and_login_action(self, m_check_output, m_check_call):
-        """Test on iscsi discovery and login action."""
-        self.harness.update_config({"iscsi-target": "abc", "iscsi-port": "443"})
-        action_event = FakeActionEvent()
-        self.harness.charm._on_iscsi_discovery_and_login_action(action_event)
 
-        m_check_call.assert_has_calls(
-            [
-                call(
-                    ["iscsiadm", "-m", "discovery", "-t", "sendtargets", "-p", "abc" + ":" + "443"]
-                ),
-            ],
-            any_order=False,
-        )
-        m_check_output.assert_has_calls(
-            [call(["iscsiadm", "-m", "node", "--login"], stderr=-2)], any_order=False
-        )
-        self.assertEqual(action_event.results["success"], "True")
+def test_on_iscsi_discovery_and_login_action(harness, mocker):
+    """Test on iscsi discovery and login action."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_check_output = mocker.patch("charm.subprocess.check_output")
+    action_event = FakeActionEvent()
+    harness.update_config({"iscsi-target": "abc", "iscsi-port": "443"})
+    harness.begin()
+    harness.charm._on_iscsi_discovery_and_login_action(action_event)
 
-    @patch("charm.deferred_events.get_deferred_restarts")
-    def test_get_status_message(self, m_get_deferred_restarts):
-        """Test on setting active status with correct status message."""
-        m_get_deferred_restarts.return_value = []
-        self.assertEqual(self.harness.charm.get_status_message(), "Unit is ready")
+    mock_check_call.assert_has_calls(
+        [
+            call(["iscsiadm", "-m", "discovery", "-t", "sendtargets", "-p", "abc" + ":" + "443"]),
+        ],
+        any_order=False,
+    )
+    mock_check_output.assert_has_calls(
+        [call(["iscsiadm", "-m", "node", "--login"], stderr=-2)], any_order=False
+    )
+    assert action_event.results["success"] == "True"
 
-        m_get_deferred_restarts.return_value = [
-            deferred_events.ServiceEvent(
-                timestamp=123456,
-                service="svc1",
-                reason="Reason1",
-                action="restart",
-                policy_requestor_name="other_app",
-                policy_requestor_type="charm",
-            ),
-            deferred_events.ServiceEvent(
-                timestamp=234567,
-                service="svc2",
-                reason="Reason2",
-                action="restart",
-                policy_requestor_name="storage-connector",
-                policy_requestor_type="charm",
-            ),
-        ]
-        self.assertEqual(
-            self.harness.charm.get_status_message(),
-            "Unit is ready. Services queued for restart: svc2",
-        )
 
-    @patch("charm.deferred_events.check_restart_timestamps")
-    @patch("charm.deferred_events.get_deferred_restarts")
-    def test_check_deferred_restarts_queue(
-        self, m_get_deferred_restarts, m_check_restart_timestamps
-    ):
-        """Test check_deferred_restarts_queue decorator function."""
-        self.harness.charm.unit.status = ActiveStatus("Unit is ready")
-        m_get_deferred_restarts.return_value = [
+def test_get_status_message(harness, mocker):
+    """Test on setting active status with correct status message."""
+    mock_get_deferred_restarts = mocker.patch(
+        "charm.deferred_events.get_deferred_restarts", return_value=[]
+    )
+    harness.begin()
+    assert harness.charm.get_status_message() == "Unit is ready"
+
+    mock_get_deferred_restarts.return_value = [
+        deferred_events.ServiceEvent(
+            timestamp=123456,
+            service="svc1",
+            reason="Reason1",
+            action="restart",
+            policy_requestor_name="other_app",
+            policy_requestor_type="charm",
+        ),
+        deferred_events.ServiceEvent(
+            timestamp=234567,
+            service="svc2",
+            reason="Reason2",
+            action="restart",
+            policy_requestor_name="storage-connector",
+            policy_requestor_type="charm",
+        ),
+    ]
+
+    assert harness.charm.get_status_message() == "Unit is ready. Services queued for restart: svc2"
+
+
+def test_check_deferred_restarts_queue(harness, mocker):
+    """Test check_deferred_restarts_queue decorator function."""
+    mock_check_restart_timestamps = mocker.patch("charm.deferred_events.check_restart_timestamps")
+    mocker.patch(
+        "charm.deferred_events.get_deferred_restarts",
+        return_value=[
             deferred_events.ServiceEvent(
                 timestamp=234567,
                 service="svc",
@@ -329,132 +272,150 @@ class TestCharm(unittest.TestCase):
                 policy_requestor_name="storage-connector",
                 policy_requestor_type="charm",
             )
-        ]
+        ],
+    )
+    harness.begin()
+    harness.charm.unit.status = ActiveStatus("Unit is ready")
 
-        # Trigger decorator function by emitting update_status event
-        self.harness.charm.on.update_status.emit()
+    # Trigger decorator function by emitting update_status event
+    harness.charm.on.update_status.emit()
 
-        m_check_restart_timestamps.assert_called_once()
-        self.assertEqual(
-            self.harness.charm.unit.status,
-            ActiveStatus("Unit is ready. Services queued for restart: svc"),
-        )
+    mock_check_restart_timestamps.assert_called_once()
+    assert harness.charm.unit.status == ActiveStatus(
+        "Unit is ready. Services queued for restart: svc"
+    )
 
-    @patch("charm.policy_rcd.install_policy_rcd")
-    @patch("charm.policy_rcd.remove_policy_file")
-    @patch("charm.policy_rcd.add_policy_block")
-    @patch("charm.os.chmod")
-    def test_configure_deferred_restarts(
-        self, m_chmod, m_add_policy_block, m_remove_policy_file, install_policy_rcd
-    ):
-        """Test on setting up deferred restarts in policy-rc.d."""
-        self.harness.update_config({"enable-auto-restarts": True})
-        self.harness.charm._configure_deferred_restarts()
-        install_policy_rcd.assert_called_once()
-        m_remove_policy_file.assert_called_once()
-        m_chmod.assert_called_once()
 
-        self.harness.update_config({"enable-auto-restarts": False})
-        self.harness.charm._configure_deferred_restarts()
-        m_add_policy_block.assert_has_calls(
-            [
-                call("iscsid", ["stop", "restart", "try-restart"]),
-                call("open-iscsi", ["stop", "restart", "try-restart"]),
-            ],
-            any_order=False,
-        )
+def test_configure_deferred_restarts(harness, mocker):
+    """Test on setting up deferred restarts in policy-rc.d."""
+    mock_install_policy_rcd = mocker.patch("charm.policy_rcd.install_policy_rcd")
+    mock_remove_policy_file = mocker.patch("charm.policy_rcd.remove_policy_file")
+    mock_add_policy_block = mocker.patch("charm.policy_rcd.add_policy_block")
+    mock_chmod = mocker.patch("charm.os.chmod")
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
-    def test_on_restart_non_iscsi_services(self, m_iscsi_discovery_and_login, m_check_call):
-        """Test on restarting non-iscsi services."""
-        self.harness.charm._restart_services(services=["multipathd"])
-        m_check_call.assert_has_calls(
-            [call(["systemctl", "restart", "multipathd"])], any_order=True
-        )
-        m_iscsi_discovery_and_login.assert_not_called()
+    harness.update_config({"enable-auto-restarts": True})
+    harness.begin()
+    harness.charm._configure_deferred_restarts()
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
-    def test_on_restart_iscsi_services_with_discovery_login(
-        self, m_iscsi_discovery_and_login, m_check_call
-    ):
-        """Test on restarting a iscsi service with discovery and login."""
-        self.harness.update_config({"iscsi-discovery-and-login": True})
-        self.harness.charm._restart_services(services=["iscsid"])
-        m_check_call.assert_has_calls([call(["systemctl", "restart", "iscsid"])], any_order=True)
-        m_iscsi_discovery_and_login.assert_called_once()
+    mock_install_policy_rcd.assert_called_once()
+    mock_remove_policy_file.assert_called_once()
+    mock_chmod.assert_called_once()
 
-    @patch("charm.subprocess.check_call")
-    @patch("charm.StorageConnectorCharm._iscsi_discovery_and_login")
-    def test_on_restart_iscsi_services_without_discovery_login(
-        self, m_iscsi_discovery_and_login, m_check_call
-    ):
-        """Test on restarting a iscsi service without running discovery and login."""
-        self.harness.update_config({"iscsi-discovery-and-login": False})
-        self.harness.charm._restart_services(services=["iscsid"])
-        m_check_call.assert_has_calls([call(["systemctl", "restart", "iscsid"])], any_order=True)
-        m_iscsi_discovery_and_login.assert_not_called()
+    harness.update_config({"enable-auto-restarts": False})
+    harness.charm._configure_deferred_restarts()
+    mock_add_policy_block.assert_has_calls(
+        [
+            call("iscsid", ["stop", "restart", "try-restart"]),
+            call("open-iscsi", ["stop", "restart", "try-restart"]),
+        ],
+        any_order=False,
+    )
 
-    @patch("charm.subprocess.check_output")
-    @patch("charm.subprocess.check_call")
-    @patch("charm.logging.exception")
-    def test_iscsiadm_discovery_failed(self, m_log_exception, m_check_call, m_check_output):
-        """Test response to iscsiadm discovery failure."""
-        self.harness.update_config(
-            {"storage-type": "iscsi", "iscsi-target": "abc", "iscsi-port": "443"}
-        )
-        self.harness.charm.unit.status = ActiveStatus("Unit is ready")
-        m_check_call.side_effect = charm.subprocess.CalledProcessError(
+
+def test_on_restart_non_iscsi_services(harness, mocker):
+    """Test on restarting non-iscsi services."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_iscsi_discovery_and_login = mocker.patch(
+        "charm.StorageConnectorCharm._iscsi_discovery_and_login"
+    )
+    harness.begin()
+    harness.charm._restart_services(services=["multipathd"])
+    mock_check_call.assert_has_calls(
+        [call(["systemctl", "restart", "multipathd"])], any_order=True
+    )
+    mock_iscsi_discovery_and_login.assert_not_called()
+
+
+def test_on_restart_iscsi_services_with_discovery_login(harness, mocker):
+    """Test on restarting a iscsi service with discovery and login."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_iscsi_discovery_and_login = mocker.patch(
+        "charm.StorageConnectorCharm._iscsi_discovery_and_login"
+    )
+    harness.update_config({"iscsi-discovery-and-login": True})
+    harness.begin()
+    harness.charm._restart_services(services=["iscsid"])
+    mock_check_call.assert_has_calls([call(["systemctl", "restart", "iscsid"])], any_order=True)
+    mock_iscsi_discovery_and_login.assert_called_once()
+
+
+def test_on_restart_iscsi_services_without_discovery_login(harness, mocker):
+    """Test on restarting a iscsi service without running discovery and login."""
+    mock_check_call = mocker.patch("charm.subprocess.check_call")
+    mock_iscsi_discovery_and_login = mocker.patch(
+        "charm.StorageConnectorCharm._iscsi_discovery_and_login"
+    )
+    harness.update_config({"iscsi-discovery-and-login": False})
+    harness.begin()
+    harness.charm._restart_services(services=["iscsid"])
+    mock_check_call.assert_has_calls([call(["systemctl", "restart", "iscsid"])], any_order=True)
+    mock_iscsi_discovery_and_login.assert_not_called()
+
+
+def test_iscsiadm_discovery_failed(harness, mocker):
+    """Test response to iscsiadm discovery failure."""
+    mock_log_exception = mocker.patch("charm.logging.exception")
+    mocker.patch("charm.subprocess.check_output")
+    mocker.patch(
+        "charm.subprocess.check_call",
+        side_effect=charm.subprocess.CalledProcessError(
             returncode=15,
             cmd=["iscsiadm", "-m", "discovery", "-t", "sendtargets", "-p", "abc" + ":" + "443"],
-        )
-        self.harness.charm._iscsi_discovery_and_login()
-        m_log_exception.assert_called_once()
+        ),
+    )
 
-    @patch("charm.subprocess.check_output")
-    @patch("charm.subprocess.check_call")
-    @patch("charm.logging.exception")
-    def test_iscsiadm_login_failed(self, m_log_exception, m_check_call, m_check_output):
-        """Test response to iscsiadm login failure."""
-        self.harness.update_config(
-            {"storage-type": "iscsi", "iscsi-target": "abc", "iscsi-port": "443"}
-        )
-        self.harness.charm.unit.status = ActiveStatus("Unit is ready")
-        m_check_output.side_effect = charm.subprocess.CalledProcessError(
+    harness.update_config({"storage-type": "iscsi", "iscsi-target": "abc", "iscsi-port": "443"})
+    harness.begin()
+    harness.charm.unit.status = ActiveStatus("Unit is ready")
+    harness.charm._iscsi_discovery_and_login()
+    mock_log_exception.assert_called_once()
+
+
+def test_iscsiadm_login_failed(harness, mocker):
+    """Test response to iscsiadm login failure."""
+    mock_log_exception = mocker.patch("charm.logging.exception")
+    mocker.patch("charm.subprocess.check_output")
+    mocker.patch(
+        "charm.subprocess.check_call",
+        side_effect=charm.subprocess.CalledProcessError(
             returncode=15,
             cmd=["iscsiadm", "-m", "node", "--login"],
             output=b"iscsiadm: Could not log into all portals",
-        )
-        self.harness.charm._iscsi_discovery_and_login()
-        m_log_exception.assert_called_once()
+        ),
+    )
+    harness.update_config({"storage-type": "iscsi", "iscsi-target": "abc", "iscsi-port": "443"})
+    harness.begin()
+    harness.charm.unit.status = ActiveStatus("Unit is ready")
+    harness.charm._iscsi_discovery_and_login()
+    mock_log_exception.assert_called_once()
 
-    @patch("storage_connector.metrics_utils.uninstall_exporter")
-    @patch("storage_connector.metrics_utils.install_exporter")
-    def test_on_metrics_endpoint_handlers(self, m_install_exporter, m_uninstall_exporter):
-        """Test the relation event handlers for metrics-endpoint."""
-        rel_id = self.harness.add_relation("metrics-endpoint", "prometheus-k8s")
-        m_install_exporter.assert_called_once_with(self.harness.charm.model.resources)
 
-        self.harness.remove_relation(rel_id)
-        m_uninstall_exporter.assert_called_once()
+def test_on_metrics_endpoint_handlers(harness, mocker):
+    """Test the relation event handlers for metrics-endpoint."""
+    mock_install_exporter = mocker.patch("storage_connector.metrics_utils.install_exporter")
+    mock_uninstall_exporter = mocker.patch("storage_connector.metrics_utils.uninstall_exporter")
 
-    @patch("storage_connector.metrics_utils.uninstall_exporter")
-    @patch("storage_connector.metrics_utils.install_exporter")
-    @patch("storage_connector.nrpe_utils.unsync_nrpe_files")
-    def test_on_nrpe_external_master_handlers(
-        self,
-        m_unsync_nrpe_files,
-        m_install_exporter,
-        m_uninstall_exporter,
-    ):
-        """Test the relation event handlers for nrpe-external-master."""
-        rel_id = self.harness.add_relation("nrpe-external-master", "nrpe")
-        m_install_exporter.assert_called_once_with(self.harness.charm.model.resources)
+    harness.begin()
+    rel_id = harness.add_relation("metrics-endpoint", "prometheus-k8s")
+    mock_install_exporter.assert_called_once_with(harness.charm.model.resources)
 
-        self.harness.remove_relation(rel_id)
-        m_uninstall_exporter.assert_called_once()
-        m_unsync_nrpe_files.assert_called_once()
+    harness.remove_relation(rel_id)
+    mock_uninstall_exporter.assert_called_once()
+
+
+def test_on_nrpe_external_master_handlers(harness, mocker):
+    """Test the relation event handlers for nrpe-external-master."""
+    mock_install_exporter = mocker.patch("storage_connector.metrics_utils.install_exporter")
+    mock_uninstall_exporter = mocker.patch("storage_connector.metrics_utils.uninstall_exporter")
+    mock_unsync_nrpe_files = mocker.patch("storage_connector.nrpe_utils.unsync_nrpe_files")
+
+    harness.begin()
+    rel_id = harness.add_relation("nrpe-external-master", "nrpe")
+    mock_install_exporter.assert_called_once_with(harness.charm.model.resources)
+
+    harness.remove_relation(rel_id)
+    mock_uninstall_exporter.assert_called_once()
+    mock_unsync_nrpe_files.assert_called_once()
 
 
 class FakeActionEvent(EventBase):
@@ -474,7 +435,3 @@ class FakeActionEvent(EventBase):
     def log(self, log):
         """Mock logs."""
         self.log = log
-
-
-if __name__ == "__main__":
-    unittest.main()

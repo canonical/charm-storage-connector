@@ -1,4 +1,1 @@
-mock
-pyyaml
-coverage
-stestr
+pytest-mock
