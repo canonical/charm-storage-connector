@@ -30,9 +30,7 @@ def test_unsync_nrpe_files(mocker):
 
 def test_update_nrpe_config(mocker):
     """Test update_nrpe_config function."""
-    mock_sync_nrpe_files = mocker.patch(
-        "storage_connector.nrpe_utils.sync_nrpe_files"
-    )
+    mock_sync_nrpe_files = mocker.patch("storage_connector.nrpe_utils.sync_nrpe_files")
     mock_nrpe_compat = mocker.patch("storage_connector.nrpe_utils.NRPE")
     mock_config = mocker.MagicMock()
     mock_config.get.return_value = 1

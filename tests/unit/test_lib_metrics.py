@@ -35,13 +35,8 @@ def test_uninstall_exporter_snap(mocker):
 
 def test_install_multipath_status_cronjob(mocker):
     """Test the install_multipath_status_cronjob function."""
-    mocker.patch(
-        "storage_connector.metrics_utils.CRON_SCRIPT_OUTPUT_PATH",
-        "/test"
-    )
-    mock_cron_script_path = mocker.patch(
-        "storage_connector.metrics_utils.CRON_SCRIPT_PATH"
-    )
+    mocker.patch("storage_connector.metrics_utils.CRON_SCRIPT_OUTPUT_PATH", "/test")
+    mock_cron_script_path = mocker.patch("storage_connector.metrics_utils.CRON_SCRIPT_PATH")
     mock_cron_script_path.return_value = mocker.MagicMock()
 
     metrics_utils.install_multipath_status_cronjob()
@@ -53,9 +48,7 @@ def test_install_multipath_status_cronjob(mocker):
 
 def test_uninstall_multipath_status_cronjob(mocker):
     """Test the uninstall_multipath_status_cronjob function."""
-    mock_cron_script_path = mocker.patch(
-        "storage_connector.metrics_utils.CRON_SCRIPT_PATH"
-    )
+    mock_cron_script_path = mocker.patch("storage_connector.metrics_utils.CRON_SCRIPT_PATH")
     mock_cron_script_output_path = mocker.patch(
         "storage_connector.metrics_utils.CRON_SCRIPT_OUTPUT_PATH"
     )

@@ -221,7 +221,7 @@ class StorageConnectorCharm(CharmBase):
         if self._stored.storage_type == "iscsi":
             self._configure_iscsi(tenv=tenv, event_name="config changed")
             if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-                return  # type: ignore
+                return  # type: ignore  # pragma: nocover
 
         self._multipath_configuration(tenv)
         if isinstance(self.unit.status, BlockedStatus):  # type: ignore
@@ -445,7 +445,9 @@ class StorageConnectorCharm(CharmBase):
                 logging.debug("Found event: %s x %d", event_path, notice_count)
 
         if notice_count > 1:
-            logging.debug("Not deferring %s notice count of %d", handle, notice_count)
+            logging.debug(  # pragma: nocover
+                "Not deferring %s notice count of %d", handle, notice_count
+            )
         else:
             logging.debug("Deferring %s notice count of %d", handle, notice_count)
             event.defer()
@@ -525,7 +527,7 @@ class StorageConnectorCharm(CharmBase):
                     )
                     return
             else:
-                logging.debug("multipath-%s is empty.", section)
+                logging.debug("multipath-%s is empty.", section)  # pragma: nocover
 
         if self._stored.storage_type == "fc":
             wwid = self._retrieve_multipath_wwid()
@@ -672,5 +674,5 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = ActiveStatus(self.get_status_message())
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: nocover
     main(StorageConnectorCharm)

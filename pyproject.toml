@@ -76,8 +76,8 @@ module = [
 
 [tool.coverage.run]
 relative_files = true
-source = ["src"]
-omit = ["tests/**", "docs/**", "templates/**"]
+source = ["src", "lib"]
+omit = ["tests/**", "docs/**", "templates/**", "lib/charms/**"]
 
 [tool.coverage.report]
 fail_under = 100
