@@ -1,38 +1,47 @@
+# This is a template `.gitignore` file for ops charms
+# This file is managed by bootstack-charms-spec and should not be modified
+# within individual charm repos. https://launchpad.net/bootstack-charms-spec
+
+# Juju files
+.unit-state.db
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 
+# Tests files and dir
+.pytest_cache/
+.coverage
+.tox
+.venv
+reports/
+**/report/
+htmlcov/
+.mypy_cache
+
 # Log files
 *.log
-.last*
 
-.tox/
-.coverage*
-htmlcov
-cover/*
-.stestr/*
+# IDEs
+.idea/
+.vscode/
 
 # vi
 .*.swp
 
-# pycharm
-.idea/
-
-#visual studio code
-.history
-
 # version data
 repo-info
 
-# reports
-report/*
+# Python builds
+deb_dist/
+dist/
+*.egg-info/
 
-# virtual env
-env
+# Snaps
+*.snap
 
-# build folder
-build
-.build
+# Builds
+.build/
+build/
 *.charm
-charm.egg-info
