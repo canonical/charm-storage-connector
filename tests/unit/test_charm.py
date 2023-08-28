@@ -862,6 +862,8 @@ def test_on_cos_agent_relation_handlers(harness, mocker):
     mock_uninstall_exporter = mocker.patch("storage_connector.metrics_utils.uninstall_exporter")
 
     rel_id = harness.add_relation("cos-agent", "grafana-agent")
+
+    # Adding a new unit to the relation triggers the RelationJoinedEvent
     harness.add_relation_unit(rel_id, "grafana-agent/0")
     mock_install_exporter.assert_called_once_with(harness.charm.model.resources)
 
