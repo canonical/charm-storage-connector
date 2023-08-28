@@ -856,12 +856,12 @@ def test_iscsiadm_login_failed(harness, mocker):
     mock_log_exception.assert_called_once()
 
 
-def test_on_metrics_endpoint_handlers(harness, mocker):
-    """Test the relation event handlers for metrics-endpoint."""
+def test_on_cos_agent_relation_handlers(harness, mocker):
+    """Test the relation event handlers for cos-agent."""
     mock_install_exporter = mocker.patch("storage_connector.metrics_utils.install_exporter")
     mock_uninstall_exporter = mocker.patch("storage_connector.metrics_utils.uninstall_exporter")
 
-    rel_id = harness.add_relation("metrics-endpoint", "prometheus-k8s")
+    rel_id = harness.add_relation("cos-agent", "grafana-agent")
     mock_install_exporter.assert_called_once_with(harness.charm.model.resources)
 
     harness.remove_relation(rel_id)

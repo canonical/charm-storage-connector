@@ -18,7 +18,7 @@ from typing import Any, Callable, List, Optional, cast
 import apt  # pylint: disable=import-error
 import yaml
 from charmhelpers.contrib.openstack import deferred_events, policy_rcd
-from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider  # noqa
+from charms.grafana_agent.v0.cos_agent import COSAgentProvider  # noqa
 from jinja2 import Environment, FileSystemLoader
 from ops.charm import (
     ActionEvent,
@@ -95,6 +95,7 @@ class StorageConnectorCharm(CharmBase):
         "iscsi": ["storage-type", "iscsi-target", "iscsi-port", "multipath-devices"],
         "fc": ["storage-type", "fc-lun-alias", "multipath-devices"],
     }
+    EXPORTER_PORT = 9090
 
     def __init__(self, *args: Any) -> None:
         """Initialize charm and configure states and events to observe."""
@@ -117,10 +118,10 @@ class StorageConnectorCharm(CharmBase):
             self.on.iscsi_discovery_and_login_action, self._on_iscsi_discovery_and_login_action
         )
         self.framework.observe(
-            self.on.metrics_endpoint_relation_created, self._on_metrics_endpoint_relation_created
+            self.on.cos_agent_relation_joined, self._on_cos_agent_relation_joined
         )
         self.framework.observe(
-            self.on.metrics_endpoint_relation_broken, self._on_metrics_endpoint_relation_broken
+            self.on.cos_agent_relation_departed, self._on_cos_agent_relation_departed
         )
         self.framework.observe(
             self.on.nrpe_external_master_relation_created,
@@ -134,15 +135,9 @@ class StorageConnectorCharm(CharmBase):
             self.on.nrpe_external_master_relation_broken,
             self._on_nrpe_external_master_relation_broken,
         )
-
-        self.metrics_endpoint = MetricsEndpointProvider(
+        self.cos_agent_provider = COSAgentProvider(
             self,
-            jobs=[
-                {
-                    "metrics_path": "/",
-                    "static_configs": [{"targets": ["*:9090"]}],
-                },
-            ],
+            metrics_endpoints=[{"path": "/", "port": self.EXPORTER_PORT}],
         )
 
         # -- initialize states --
@@ -153,7 +148,7 @@ class StorageConnectorCharm(CharmBase):
             fc_scan_ran_once=False,
             storage_type=self.model.config.get("storage-type"),
             mp_conf_name="juju-" + self.app.name + "-multipath.conf",
-            prometheus_related=False,
+            grafana_agent_related=False,
             nrpe_related=False,
         )
         self.mp_path: Path = self.MULTIPATH_CONF_PATH / cast(str, self._stored.mp_conf_name)
@@ -622,25 +617,25 @@ class StorageConnectorCharm(CharmBase):
             for svc in self.DEFERRED_SERVICES:
                 policy_rcd.add_policy_block(svc, blocked_actions)
 
-    def _on_metrics_endpoint_relation_created(
+    def _on_cos_agent_relation_joined(
         self, event: RelationCreatedEvent  # pylint: disable=unused-argument
     ) -> None:
-        """Relation-created event handler for metrics-endpoint."""
+        """Install and start exporter when joining cos-agent relation."""
         self.unit.status = MaintenanceStatus("Installing exporter")
         metrics_utils.install_exporter(self.model.resources)
 
-        self._stored.prometheus_related = True
+        self._stored.grafana_agent_related = True
         self.unit.status = ActiveStatus(self.get_status_message())
 
-    def _on_metrics_endpoint_relation_broken(
+    def _on_cos_agent_relation_departed(
         self, event: RelationBrokenEvent  # pylint: disable=unused-argument
     ) -> None:
-        """Relation-broken event handler for metrics-endpoint."""
+        """Uninstall exporter when departing from cos-agent relation."""
         if self._stored.nrpe_related is False:
             self.unit.status = MaintenanceStatus("Removing exporter")  # type: ignore
             metrics_utils.uninstall_exporter()
 
-        self._stored.prometheus_related = False
+        self._stored.grafana_agent_related = False
         self.unit.status = ActiveStatus(self.get_status_message())
 
     def _on_nrpe_external_master_relation_created(
@@ -663,7 +658,7 @@ class StorageConnectorCharm(CharmBase):
         self, event: RelationBrokenEvent  # pylint: disable=unused-argument
     ) -> None:
         """Relation-broken event handler for nrpe-external-master."""
-        if self._stored.prometheus_related is False:
+        if self._stored.grafana_agent_related is False:
             self.unit.status = MaintenanceStatus("Removing exporter software")  # type: ignore
             metrics_utils.uninstall_exporter()
 
