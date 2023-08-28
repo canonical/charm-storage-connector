@@ -1,4 +1,4 @@
-"""Unit tests for ISCSI Connector charm."""
+"""Unit tests for the storage-connector charm."""
 import subprocess
 import sys
 from textwrap import dedent
@@ -862,6 +862,7 @@ def test_on_cos_agent_relation_handlers(harness, mocker):
     mock_uninstall_exporter = mocker.patch("storage_connector.metrics_utils.uninstall_exporter")
 
     rel_id = harness.add_relation("cos-agent", "grafana-agent")
+    harness.add_relation_unit(rel_id, "grafana-agent/0")
     mock_install_exporter.assert_called_once_with(harness.charm.model.resources)
 
     harness.remove_relation(rel_id)
