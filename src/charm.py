@@ -29,6 +29,8 @@ from ops.charm import (
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
+    RelationJoinedEvent,
+    RelationDepartedEvent
     StartEvent,
     UpdateStatusEvent,
 )
@@ -618,7 +620,7 @@ class StorageConnectorCharm(CharmBase):
                 policy_rcd.add_policy_block(svc, blocked_actions)
 
     def _on_cos_agent_relation_joined(
-        self, event: RelationCreatedEvent  # pylint: disable=unused-argument
+        self, event: RelationJoinedEvent
     ) -> None:
         """Install and start exporter when joining cos-agent relation."""
         self.unit.status = MaintenanceStatus("Installing exporter")
@@ -628,7 +630,7 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = ActiveStatus(self.get_status_message())
 
     def _on_cos_agent_relation_departed(
-        self, event: RelationBrokenEvent  # pylint: disable=unused-argument
+        self, event: RelationDepartedEvent
     ) -> None:
         """Uninstall exporter when departing from cos-agent relation."""
         if self._stored.nrpe_related is False:
