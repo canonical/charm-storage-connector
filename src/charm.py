@@ -29,8 +29,8 @@ from ops.charm import (
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationCreatedEvent,
+    RelationDepartedEvent,
     RelationJoinedEvent,
-    RelationDepartedEvent
     StartEvent,
     UpdateStatusEvent,
 )
@@ -75,6 +75,7 @@ def check_deferred_restarts_queue(func: Callable) -> Callable:
     return wrapper
 
 
+# pylint: disable=too-few-public-methods
 class StorageConnectorCharm(CharmBase):
     """Class representing this Operator charm."""
 
@@ -620,7 +621,7 @@ class StorageConnectorCharm(CharmBase):
                 policy_rcd.add_policy_block(svc, blocked_actions)
 
     def _on_cos_agent_relation_joined(
-        self, event: RelationJoinedEvent
+        self, event: RelationJoinedEvent  # pylint: disable=unused-argument
     ) -> None:
         """Install and start exporter when joining cos-agent relation."""
         self.unit.status = MaintenanceStatus("Installing exporter")
@@ -630,7 +631,7 @@ class StorageConnectorCharm(CharmBase):
         self.unit.status = ActiveStatus(self.get_status_message())
 
     def _on_cos_agent_relation_departed(
-        self, event: RelationDepartedEvent
+        self, event: RelationDepartedEvent  # pylint: disable=unused-argument
     ) -> None:
         """Uninstall exporter when departing from cos-agent relation."""
         if self._stored.nrpe_related is False:
