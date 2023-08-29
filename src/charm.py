@@ -163,8 +163,8 @@ class StorageConnectorCharm(CharmBase):
             return
 
         self._check_mandatory_config()
-        if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-            return  # type: ignore
+        if isinstance(self.unit.status, BlockedStatus):
+            return
 
         # install packages
         cache = apt.cache.Cache()
@@ -201,8 +201,8 @@ class StorageConnectorCharm(CharmBase):
 
         self.unit.status = MaintenanceStatus("Validating charm configuration")
         self._check_mandatory_config()
-        if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-            return  # type: ignore
+        if isinstance(self.unit.status, BlockedStatus):
+            return
 
         if self._stored.storage_type == "fc" and self._stored.fc_scan_ran_once is False:
             self._fc_scan_host()  # type: ignore
@@ -218,16 +218,16 @@ class StorageConnectorCharm(CharmBase):
 
         if self._stored.storage_type == "iscsi":
             self._configure_iscsi(tenv=tenv, event_name="config changed")
-            if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-                return  # type: ignore  # pragma: nocover
+            if isinstance(self.unit.status, BlockedStatus):
+                return  # pragma: nocover
 
         self._multipath_configuration(tenv)
-        if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-            return  # type: ignore
+        if isinstance(self.unit.status, BlockedStatus):
+            return
 
         self._validate_multipath_config()
-        if isinstance(self.unit.status, BlockedStatus):  # type: ignore
-            return  # type: ignore
+        if isinstance(self.unit.status, BlockedStatus):
+            return
 
         self._reload_multipathd_service()
 
