@@ -15,11 +15,11 @@ tags:
 subordinate: true
 requires:
     host:
-       interface: juju-info
-       scope: container
+        interface: juju-info
+        scope: container
 provides:
-    metrics-endpoint:
-        interface: prometheus_scrape
+    cos-agent:
+        interface: cos_agent
     nrpe-external-master:
         interface: nrpe-external-master
         scope: container

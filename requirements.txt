@@ -1,5 +1,4 @@
 jinja2
 charmhelpers
-
-# Pin ops version to support bionic deployments
-ops < 2.0
+cosl
+ops

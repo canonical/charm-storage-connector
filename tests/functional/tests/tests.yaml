@@ -1,20 +1,19 @@
 charm_name: storage-connector
 
 smoke_bundles:
-    - jammy
+  - jammy
 
 gate_bundles:
-    - bionic
-    - focal
-    - jammy
+  - focal
+  - jammy
 
 configure:
- - storage-connector-func-tests.setup.basic_target_setup
- - storage-connector-func-tests.setup.configure_iscsi_target
- - storage-connector-func-tests.setup.configure_iscsi_connector
+  - storage-connector-func-tests.setup.basic_target_setup
+  - storage-connector-func-tests.setup.configure_iscsi_target
+  - storage-connector-func-tests.setup.configure_iscsi_connector
 
 tests:
- - storage-connector-func-tests.tests.StorageConnectorTest
+  - storage-connector-func-tests.tests.StorageConnectorTest
 
 target_deploy_status:
   storage-connector:
