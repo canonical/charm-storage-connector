@@ -8,6 +8,7 @@ description: |
     In the iSCSI mode, it will connect the host to an iSCSI target and configure multipath
     accordingly. For Fibre Channel, this charm detects the WWID of the FC LUNs and
     configures multipathd so that the device is ready to be used.
+docs: https://discourse.charmhub.io/t/storage-connector-docs-index/12424
 tags:
     - iscsi
     - fibrechannel
