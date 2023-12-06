@@ -181,6 +181,65 @@ def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
     assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
+def test_on_config_changed_iscsi_reuse_initiator_name(harness, mocker, iscsi_config):
+    """Test config changed handler for iscsi configuration."""
+    mocker.patch("charm.utils.is_container", return_value=False)
+    mock_getoutput = mocker.patch(
+        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
+    )
+    mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
+    mocker.patch("charm.subprocess.check_call")
+    mocker.patch("charm.subprocess.check_output")
+    mocker.patch("charm.StorageConnectorCharm._configure_deferred_restarts")
+    mocker.patch("charm.StorageConnectorCharm._defer_service_restart")
+    mocker.patch("charm.Path.chmod")
+    mock_write_text = mocker.patch("charm.Path.write_text")
+
+    expected_initiator_content = dedent(
+        """\
+        ###############################################################################
+        # [ WARNING ]
+        # configuration file maintained by Juju
+        # local changes will be overwritten.
+        #
+        # DO NOT EDIT OR REMOVE THIS FILE!
+        # If you remove this file, the iSCSI daemon will not start.
+        # If you change the InitiatorName, existing access control lists
+        # may reject this initiator.  The InitiatorName must be unique
+        # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
+        ###############################################################################
+        InitiatorName=iqn.2020-07.canonical.com:lun1"""
+    )
+
+    harness.charm._stored.installed = True
+    harness.charm._stored.initiator_name = ""
+
+    iscsi_config["initiator-dictionary"] = "{}"
+    harness.update_config(iscsi_config)
+
+    assert call("/sbin/iscsi-iname") in mock_getoutput.mock_calls
+    assert harness.charm._stored.initiator_name == "iqn.2020-07.canonical.com:lun1"
+    mock_write_text.assert_has_calls(
+        [
+            call(expected_initiator_content),
+        ]
+    )
+    assert isinstance(harness.charm.unit.status, ActiveStatus)
+    mock_getoutput.reset_mock()
+    mock_write_text.reset_mock()
+
+    # config_changed again to check if initiator name is reused
+    harness.charm.on.config_changed.emit()
+
+    assert call("/sbin/iscsi-iname") not in mock_getoutput.mock_calls
+    mock_write_text.assert_has_calls(
+        [
+            call(expected_initiator_content),
+        ]
+    )
+    assert isinstance(harness.charm.unit.status, ActiveStatus)
+
+
 def test_on_config_changed_iscsi_defers_restart(harness, mocker, iscsi_config):
     """Test config changed handler defers restart."""
     mocker.patch("charm.utils.is_container", return_value=False)

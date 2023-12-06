@@ -150,6 +150,7 @@ class StorageConnectorCharm(CharmBase):
             started=False,
             fc_scan_ran_once=False,
             storage_type=self.model.config.get("storage-type"),
+            initiator_name="",
             mp_conf_name="juju-" + self.app.name + "-multipath.conf",
             grafana_agent_related=False,
             nrpe_related=False,
@@ -459,6 +460,7 @@ class StorageConnectorCharm(CharmBase):
     def _iscsi_initiator(self, tenv: Environment) -> None:
         charm_config = self.model.config
         initiator_name = None
+        warning_msg = None
         hostname = socket.getfqdn()
         initiators = charm_config.get("initiator-dictionary")
         if initiators:
@@ -467,11 +469,22 @@ class StorageConnectorCharm(CharmBase):
             if hostname in initiators_dict.keys():
                 initiator_name = initiators_dict[hostname]
 
+        # either initiator-dictionary not provided or hostname not present there
         if not initiator_name:
-            initiator_name = subprocess.getoutput("/sbin/iscsi-iname")
+            if self._stored.initiator_name == "":
+                self._stored.initiator_name = subprocess.getoutput("/sbin/iscsi-iname")
+                warning_msg = (
+                    "The hostname was not found in the initiator dictionary! "
+                    "The random iqn %s will be used for %s"
+                )
+            else:
+                warning_msg = (
+                    "The hostname was not found in the initiator dictionary! "
+                    "Previously generated random iqn %s will be used for %s"
+                )
+            initiator_name = self._stored.initiator_name
             logging.warning(
-                "The hostname was not found in the initiator dictionary! "
-                "The random iqn %s will be used for %s",
+                warning_msg,
                 initiator_name,
                 hostname,
             )
