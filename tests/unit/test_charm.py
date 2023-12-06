@@ -369,6 +369,7 @@ def test_on_config_changed_fc(harness, mocker, fc_config, multipath_topology):
             multipath_topology,
         ],
     )
+    mocker.patch("charm.subprocess.check_call")
     expected_multipath_conf = (
         "###############################################################################\n"
         "# [ WARNING ]\n"
