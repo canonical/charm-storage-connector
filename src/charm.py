@@ -495,7 +495,9 @@ class StorageConnectorCharm(CharmBase):
             #    the same name.
             logging.debug("/etc/initiatorname.iscsi file was not rendered")
 
-    def _get_initiator_name_from_file(self, iscsi_config_file: Path | None = None) -> str | None:
+    def _get_initiator_name_from_file(
+        self, iscsi_config_file: Optional[Path] = None
+    ) -> Optional[str]:
         """Parse iSCSI config file to check if "InitiatorName" is set.
 
         iSCSI config file is /etc/iscsi/initiatorname.iscsi by default.

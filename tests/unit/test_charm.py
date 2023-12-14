@@ -78,26 +78,46 @@ def test_on_config_changes_aborts_if_host_is_container(harness, mocker):
 
 
 @pytest.mark.parametrize(
-    "initiator_content, expected_initiator_name",
+    "initiator_content, expected_initiator_name, initiatorname_file_provided",
     [
-        (None, None),  # file doesn't exist
-        ("", None),  # file exists but no content
-        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), "test-iqn"),
+        (None, None, True),  # file doesn't exist
+        ("", None, True),  # file exists but no content
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), "test-iqn", True),
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), "test-iqn", False),
         (
             INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=  iqn-with-whitespace  "),
             "iqn-with-whitespace",
+            True,
         ),
-        (INITIATOR_CONTENT_TEMPLATE.format("WrongName=this-is-wrong"), None),
+        (INITIATOR_CONTENT_TEMPLATE.format("WrongName=this-is-wrong"), None, True),
     ],
-    ids=["no-file", "empty-file", "content-present", "content-with-whitespace", "invalid-content"],
+    ids=[
+        "no-file",
+        "empty-file",
+        "content-present",
+        "content-present-miss-initiatorname_file",
+        "content-with-whitespace",
+        "invalid-content",
+    ],
 )
 def test_get_initiator_name_from_file(
-    harness, mocker, tmp_path, initiator_content, expected_initiator_name
+    harness,
+    mocker,
+    tmp_path,
+    initiator_content,
+    expected_initiator_name,
+    initiatorname_file_provided,
 ):
     """Test fetching the initiator name from initiatorname.iscsi file."""
-    initiatorname_file = tmp_path / "initiatorname.iscsi"
-    if initiator_content is not None:
+    harness.charm.ISCSI_CONF_PATH = tmp_path
+
+    initiatorname_file = None
+    if initiator_content is not None and initiatorname_file_provided:
+        initiatorname_file = tmp_path / "initiatorname.iscsi"
         initiatorname_file.write_text(initiator_content)
+    elif not initiatorname_file_provided:
+        harness.charm.ISCSI_INITIATOR_NAME.write_text(initiator_content)
+
     initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
     assert initiator_name == expected_initiator_name
 
