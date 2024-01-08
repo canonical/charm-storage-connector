@@ -477,8 +477,8 @@ class StorageConnectorCharm(CharmBase):
             # generate random iqn
             initiator_name = subprocess.getoutput("/sbin/iscsi-iname")
             logging.warning(
-                "Hostname was not found in initiator-dict and config file.\
-                The randomly generated iqn %s will be used for %s",
+                "Hostname was not found in initiator-dict and config file. "
+                + "The randomly generated iqn %s will be used for %s",
                 initiator_name,
                 hostname,
             )
@@ -501,7 +501,7 @@ class StorageConnectorCharm(CharmBase):
 
         Returns:
             "InitiatorName" value in config file if present.
-            False if config file isn't present or "InitiatorName" isn't set.
+            None if config file isn't present or "InitiatorName" isn't set.
         """
         # can't set default param value to instance attribute
         if not iscsi_config_file:
