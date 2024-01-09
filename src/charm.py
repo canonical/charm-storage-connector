@@ -484,7 +484,7 @@ class StorageConnectorCharm(CharmBase):
             )
             render_file = True
 
-        if initiator_name != initiator_name_from_file:
+        if initiator_name and initiator_name != initiator_name_from_file:
             render_file = True
 
         if render_file:

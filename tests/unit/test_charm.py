@@ -343,7 +343,11 @@ def test_iscsi_with_initiatorname_not_rendered(mocker, harness, iscsi_config):
     harness.update_config(iscsi_config)
 
     assert call("/sbin/iscsi-iname") not in mock_getoutput.mock_calls
-    assert call(expected_initiator_content) not in mock_write_text.mock_calls
+
+    # assert that there are no Path.write_text calls from _iscsi_initiator.
+    # only write_text calls present are the ones from _multipath_configuration and
+    # _iscsid_configuration
+    assert len(mock_write_text.mock_calls) == 2
     assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
