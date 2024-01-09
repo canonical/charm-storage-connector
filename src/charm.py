@@ -460,27 +460,68 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
+        render_file = False
+
         initiators = charm_config.get("initiator-dictionary")
         if initiators:
-            # search for hostname and create context
+            # search for hostname in initiator-dictionary if it exists
             initiators_dict = json.loads(initiators)
             if hostname in initiators_dict.keys():
                 initiator_name = initiators_dict[hostname]
 
-        if not initiator_name:
+        initiator_name_from_file = self._get_initiator_name_from_file(self.ISCSI_INITIATOR_NAME)
+
+        # either initiator-dictionary not provided or hostname not present there
+        # and config file doesn't contain initiator name
+        if not initiator_name and not initiator_name_from_file:
+            # generate random iqn
             initiator_name = subprocess.getoutput("/sbin/iscsi-iname")
             logging.warning(
-                "The hostname was not found in the initiator dictionary! "
-                "The random iqn %s will be used for %s",
+                "Hostname was not found in initiator-dict and config file. "
+                + "The randomly generated iqn %s will be used for %s",
                 initiator_name,
                 hostname,
             )
+            render_file = True
 
-        logging.info("Rendering initiatorname.iscsi")
-        ctxt = {"initiator_name": initiator_name}
-        template = tenv.get_template("initiatorname.iscsi.j2")
-        rendered_content = template.render(ctxt)
-        self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
+        if initiator_name and initiator_name != initiator_name_from_file:
+            render_file = True
+
+        if render_file:
+            logging.info("Rendering initiatorname.iscsi")
+            ctxt = {"initiator_name": initiator_name}
+            template = tenv.get_template("initiatorname.iscsi.j2")
+            rendered_content = template.render(ctxt)
+            self.ISCSI_INITIATOR_NAME.write_text(rendered_content)
+
+    def _get_initiator_name_from_file(self, iscsi_config_file: Path | None = None) -> str | None:
+        """Parse iSCSI config file to check if "InitiatorName" is set.
+
+        iSCSI config file is /etc/iscsi/initiatorname.iscsi by default.
+
+        Returns:
+            "InitiatorName" value in config file if present.
+            None if config file isn't present or "InitiatorName" isn't set.
+        """
+        # can't set default param value to instance attribute
+        if not iscsi_config_file:
+            iscsi_config_file = self.ISCSI_INITIATOR_NAME
+        try:
+            with open(iscsi_config_file, encoding="utf-8") as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            logging.warning("%s doesn't exist", iscsi_config_file)
+            return None
+
+        initiator_name, value = None, None
+        for line in lines:
+            line = line.strip()
+            if line and not line.startswith("#"):
+                initiator_name, value = line.split("=")
+
+        if initiator_name and initiator_name.strip() == "InitiatorName" and value:
+            return value
+        return None
 
     def _iscsid_configuration(self, tenv: Environment) -> None:
         charm_config = self.model.config
