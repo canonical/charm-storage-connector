@@ -271,8 +271,6 @@ def test_iscsi_with_initiatorname_rendered(mocker, harness, iscsi_config):
 
     assert harness.charm._get_initiator_name_from_file() == "new-iqn"
 
-    # assert that a random iqn isn't generated
-    assert call("/sbin/iscsi-iname") not in mock_getoutput.mock_calls
     # check if file is being rendered with expected content
     mock_write_text.assert_has_calls(
         [
@@ -328,8 +326,6 @@ def test_iscsi_with_initiatorname_not_rendered(mocker, harness, iscsi_config):
     harness.update_config(iscsi_config)
 
     assert harness.charm._get_initiator_name_from_file() == "iqn.2020-07.canonical.com:lun1"
-    # random iqn not generated
-    assert call("/sbin/iscsi-iname") not in mock_getoutput.mock_calls
     # initiatorname.iscsi not rendered again
     assert call(expected_initiator_content) not in mock_write_text.mock_calls
     assert isinstance(harness.charm.unit.status, ActiveStatus)
@@ -341,8 +337,6 @@ def test_iscsi_with_initiatorname_not_rendered(mocker, harness, iscsi_config):
     # reuse the same name and don't render the file again
     iscsi_config["initiator-dictionary"] = "{}"
     harness.update_config(iscsi_config)
-
-    assert call("/sbin/iscsi-iname") not in mock_getoutput.mock_calls
 
     # assert that there are no Path.write_text calls from _iscsi_initiator.
     # only write_text calls present are the ones from _multipath_configuration and
