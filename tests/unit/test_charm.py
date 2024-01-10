@@ -76,10 +76,38 @@ def test_get_initiator_name_from_file(harness, mocker, tmp_path):
         InitiatorName=test-iqn"""
     )
 
+    wrong_initiator_content = dedent(
+        """\
+        ###############################################################################
+        # [ WARNING ]
+        # configuration file maintained by Juju
+        # local changes will be overwritten.
+        #
+        # DO NOT EDIT OR REMOVE THIS FILE!
+        # If you remove this file, the iSCSI daemon will not start.
+        # If you change the InitiatorName, existing access control lists
+        # may reject this initiator.  The InitiatorName must be unique
+        # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
+        ###############################################################################
+        wrongName=test-iqn"""
+    )
+
+    # case 1: File not present
     initiatorname_file = tmp_path / "initiatorname.iscsi"
     initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
     assert initiator_name is None
 
+    # case 2: File with empty contents
+    initiatorname_file.write_text("")
+    initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
+    assert initiator_name is None
+
+    # case 3: File with wrong format of "initiatorName"
+    initiatorname_file.write_text(wrong_initiator_content)
+    initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
+    assert initiator_name is None
+
+    # case 4: File with proper contents
     initiatorname_file.write_text(initiator_content)
     initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
     assert initiator_name == "test-iqn"
@@ -219,9 +247,7 @@ def test_iscsi_with_initiatorname_rendered(mocker, harness, iscsi_config):
     a different value from the one in the initiator-dictionary.
     """
     mocker.patch("charm.utils.is_container", return_value=False)
-    mock_getoutput = mocker.patch(
-        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
-    )
+    mocker.patch("charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1")
     mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
     mocker.patch("charm.subprocess.check_call")
     mocker.patch("charm.subprocess.check_output")
@@ -291,9 +317,7 @@ def test_iscsi_with_initiatorname_not_rendered(mocker, harness, iscsi_config):
 
     """
     mocker.patch("charm.utils.is_container", return_value=False)
-    mock_getoutput = mocker.patch(
-        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
-    )
+    mocker.patch("charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1")
     mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
     mocker.patch("charm.subprocess.check_call")
     mocker.patch("charm.subprocess.check_output")
