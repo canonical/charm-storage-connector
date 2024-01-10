@@ -460,7 +460,6 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
-        render_file = False
 
         initiators = charm_config.get("initiator-dictionary")
         if initiators:
@@ -483,9 +482,18 @@ class StorageConnectorCharm(CharmBase):
                 hostname,
             )
             render_file = True
-
-        if initiator_name and initiator_name != initiator_name_from_file:
+        elif initiator_name and initiator_name != initiator_name_from_file:
+            # initiator name configuration is provided and isn't the same as
+            # what's already present in the initiatorname.iscsi file.
+            # so render file with provided name
             render_file = True
+        else:
+            # do not render the file again for these cases:
+            # 1. initiator name configuration from initiator-dictionary is same as
+            #    name in initiatorname.iscsi file
+            # 2. no initiator name configuration but name is present in file. use
+            #    the same name.
+            render_file = False
 
         if render_file:
             logging.info("Rendering initiatorname.iscsi")
