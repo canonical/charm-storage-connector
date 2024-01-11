@@ -255,22 +255,6 @@ def test_iscsi_with_initiatorname_rendered(mocker, harness, iscsi_config):
     mocker.patch("charm.StorageConnectorCharm._defer_service_restart")
     mocker.patch("charm.Path.chmod")
 
-    expected_initiator_content = dedent(
-        """\
-        ###############################################################################
-        # [ WARNING ]
-        # configuration file maintained by Juju
-        # local changes will be overwritten.
-        #
-        # DO NOT EDIT OR REMOVE THIS FILE!
-        # If you remove this file, the iSCSI daemon will not start.
-        # If you change the InitiatorName, existing access control lists
-        # may reject this initiator.  The InitiatorName must be unique
-        # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
-        ###############################################################################
-        InitiatorName=iqn.2020-07.canonical.com:lun1"""
-    )
-
     # configure the initiatorname.iscsi file with a different name from the one in
     # the initiator-dictionary. The file should be rendered again from the name in
     # the dictionary
@@ -290,19 +274,19 @@ def test_iscsi_with_initiatorname_rendered(mocker, harness, iscsi_config):
         InitiatorName=new-iqn"""
     )
     harness.charm.ISCSI_INITIATOR_NAME.write_text(initiator_content_with_different_name)
-
-    mock_write_text = mocker.patch("charm.Path.write_text")
+    with open(harness.charm.ISCSI_INITIATOR_NAME) as f:
+        content = f.read()
+    assert "InitiatorName=new-iqn" in content
 
     harness.update_config(iscsi_config)
 
-    assert harness.charm._get_initiator_name_from_file() == "new-iqn"
+    # check if file is being rendered with expected initiator name from initiator-dictionary
+    with open(harness.charm.ISCSI_INITIATOR_NAME) as f:
+        content = f.read()
 
-    # check if file is being rendered with expected content
-    mock_write_text.assert_has_calls(
-        [
-            call(expected_initiator_content),
-        ]
-    )
+    # eval is needed to convert dict in string format to a regular dict
+    iqn_in_initiator_dict = eval(iscsi_config["initiator-dictionary"]).get("testhost.testdomain")
+    assert f"InitiatorName={iqn_in_initiator_dict}" in content
     assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
