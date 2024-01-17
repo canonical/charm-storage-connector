@@ -527,8 +527,8 @@ class StorageConnectorCharm(CharmBase):
         for line in lines:
             match = pattern.match(line)
             if match:
-                value = match.group(1).strip()
-                return value
+                initiator_name = match.group(1).strip()
+                return initiator_name
         return None
 
     def _iscsid_configuration(self, tenv: Environment) -> None:
