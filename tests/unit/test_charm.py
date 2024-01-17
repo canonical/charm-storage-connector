@@ -335,7 +335,10 @@ def test_iscsi_with_initiatorname_not_rendered(mocker, harness, iscsi_config):
 
     assert harness.charm._get_initiator_name_from_file() == "iqn.2020-07.canonical.com:lun1"
     # initiatorname.iscsi not rendered again
-    assert call(expected_initiator_content) not in mock_write_text.mock_calls
+    # assert that there are no Path.write_text calls from _iscsi_initiator.
+    # only write_text calls present are the ones from _multipath_configuration and
+    # _iscsid_configuration
+    assert len(mock_write_text.mock_calls) == 2
     assert isinstance(harness.charm.unit.status, ActiveStatus)
 
     mock_write_text.reset_mock()
