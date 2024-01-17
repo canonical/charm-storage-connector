@@ -521,14 +521,14 @@ class StorageConnectorCharm(CharmBase):
             logging.warning("%s doesn't exist", iscsi_config_file)
             return None
 
-        initiator_name, value = None, None
+        # "\s*" matches for potential whitespace around "="
+        # The capturing group "(.*)" matches for the iqn assigned to InitiatorName
+        pattern = re.compile(r"^InitiatorName\s*=\s*(.*)$")
         for line in lines:
-            line = line.strip()
-            if line and not line.startswith("#"):
-                initiator_name, value = line.split("=")
-
-        if initiator_name and initiator_name.strip() == "InitiatorName" and value:
-            return value
+            match = pattern.match(line)
+            if match:
+                value = match.group(1).strip()
+                return value
         return None
 
     def _iscsid_configuration(self, tenv: Environment) -> None:
