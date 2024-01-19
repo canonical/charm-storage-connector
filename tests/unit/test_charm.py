@@ -6,6 +6,7 @@ from unittest.mock import call, mock_open
 
 import charmhelpers.contrib.openstack.deferred_events as deferred_events
 import pytest
+from jinja2 import Environment, FileSystemLoader
 from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
@@ -99,6 +100,16 @@ def test_get_initiator_name_from_file(
         initiatorname_file.write_text(initiator_content)
     initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
     assert initiator_name == expected_initiator_name
+
+
+def test_render_iscsi_initiator(harness, mocker, iscsi_config):
+    """Test method that renders initiator name to /etc/initiatorname.iscsi."""
+    tenv = Environment(loader=FileSystemLoader("templates"))
+    initiator_name = "test-iqn"
+    harness.charm._render_iscsi_initiator(initiator_name, tenv)
+    with open(harness.charm.ISCSI_INITIATOR_NAME) as f:
+        content = f.read()
+    assert f"InitiatorName={initiator_name}" in content
 
 
 def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
