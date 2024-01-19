@@ -98,10 +98,7 @@ def test_get_initiator_name_from_file(
     if initiator_content is not None:
         initiatorname_file.write_text(initiator_content)
     initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
-    if expected_initiator_name is None:
-        assert initiator_name is expected_initiator_name
-    else:
-        assert initiator_name == expected_initiator_name
+    assert initiator_name == expected_initiator_name
 
 
 def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
@@ -261,7 +258,7 @@ def test_iscsi_with_initiator_dictionary_hostname(
     harness.update_config(iscsi_config)
 
     if render_expected:
-        mock_render.assert_called_once()
+        assert mock_render.call_args[0][0] == "iqn.2020-07.canonical.com:lun1"
     else:
         mock_render.assert_not_called()
 
@@ -303,11 +300,12 @@ def test_iscsi_without_initiator_dictionary_hostname(
     harness.update_config(iscsi_config)
 
     if render_expected:
-        mock_render.assert_called_once()
+        # only checking the initiator_name arg and not jinja2 environment
+        assert mock_render.call_args[0][0] == "iqn.2020-07.canonical.com:lun1"
     else:
         mock_render.assert_not_called()
 
-    if initiator_content is None or initiator_content == "":
+    if not initiator_content:
         # if file doesn't exist or is empty, random iqn is generated
         assert call("/sbin/iscsi-iname") in mock_getoutput.mock_calls
 
