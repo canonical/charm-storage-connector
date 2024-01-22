@@ -5,10 +5,29 @@ from textwrap import dedent
 from unittest.mock import call, mock_open
 
 import charmhelpers.contrib.openstack.deferred_events as deferred_events
+import pytest
+from jinja2 import Environment, FileSystemLoader
 from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 import charm
+
+INITIATOR_CONTENT_TEMPLATE = dedent(
+    """\
+    ###############################################################################
+    # [ WARNING ]
+    # configuration file maintained by Juju
+    # local changes will be overwritten.
+    #
+    # DO NOT EDIT OR REMOVE THIS FILE!
+    # If you remove this file, the iSCSI daemon will not start.
+    # If you change the InitiatorName, existing access control lists
+    # may reject this initiator.  The InitiatorName must be unique
+    # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
+    ###############################################################################
+    {}
+    """
+)
 
 
 def test_on_install_aborts_if_host_is_container(harness, mocker):
@@ -58,8 +77,47 @@ def test_on_config_changes_aborts_if_host_is_container(harness, mocker):
     assert not harness.charm._stored.started
 
 
+@pytest.mark.parametrize(
+    "initiator_content, expected_initiator_name",
+    [
+        (None, None),  # file doesn't exist
+        ("", None),  # file exists but no content
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), "test-iqn"),
+        (
+            INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=  iqn-with-whitespace  "),
+            "iqn-with-whitespace",
+        ),
+        (INITIATOR_CONTENT_TEMPLATE.format("WrongName=this-is-wrong"), None),
+    ],
+    ids=["no-file", "empty-file", "content-present", "content-with-whitespace", "invalid-content"],
+)
+def test_get_initiator_name_from_file(
+    harness, mocker, tmp_path, initiator_content, expected_initiator_name
+):
+    """Test fetching the initiator name from initiatorname.iscsi file."""
+    initiatorname_file = tmp_path / "initiatorname.iscsi"
+    if initiator_content is not None:
+        initiatorname_file.write_text(initiator_content)
+    initiator_name = harness.charm._get_initiator_name_from_file(initiatorname_file)
+    assert initiator_name == expected_initiator_name
+
+
+def test_render_iscsi_initiator(harness, mocker, iscsi_config):
+    """Test method that renders initiator name to /etc/initiatorname.iscsi."""
+    tenv = Environment(loader=FileSystemLoader("templates"))
+    initiator_name = "test-iqn"
+    harness.charm._render_iscsi_initiator(initiator_name, tenv)
+    with open(harness.charm.ISCSI_INITIATOR_NAME) as f:
+        content = f.read()
+    assert f"InitiatorName={initiator_name}" in content
+
+
 def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
-    """Test config changed handler for iscsi configuration."""
+    """Test config changed handler for iscsi configuration.
+
+    initiator name is provided in initiator-dictionary and is not present in
+    the initiatorname.iscsi file.
+    """
     mocker.patch("charm.utils.is_container", return_value=False)
     mocker.patch("charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1")
     mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
@@ -178,6 +236,90 @@ def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
     assert harness.charm._stored.configured
     assert harness.charm._stored.started
     assert harness.charm._stored.storage_type == "iscsi"
+    assert isinstance(harness.charm.unit.status, ActiveStatus)
+
+
+@pytest.mark.parametrize(
+    "initiator_content, render_expected",
+    [
+        (None, True),  # file doesn't exist
+        ("", True),  # file exists but no content
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), True),
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=iqn.2020-07.canonical.com:lun1"), False),
+    ],
+    ids=["no-file", "empty-file", "different-iqn", "same-iqn"],
+)
+def test_iscsi_with_initiator_dictionary_hostname(
+    mocker, harness, iscsi_config, initiator_content, render_expected
+):
+    """Test iscsi configuration when hostname is present in initiator dicitionary."""
+    mocker.patch("charm.utils.is_container", return_value=False)
+    mocker.patch("charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1")
+    mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
+    mocker.patch("charm.subprocess.check_call")
+    mocker.patch("charm.subprocess.check_output")
+    mocker.patch("charm.StorageConnectorCharm._configure_deferred_restarts")
+    mocker.patch("charm.StorageConnectorCharm._defer_service_restart")
+    mocker.patch("charm.Path.chmod")
+    mock_render = mocker.patch("charm.StorageConnectorCharm._render_iscsi_initiator")
+
+    if initiator_content is not None:
+        harness.charm.ISCSI_INITIATOR_NAME.write_text(initiator_content)
+
+    harness.update_config(iscsi_config)
+
+    if render_expected:
+        assert mock_render.call_args[0][0] == "iqn.2020-07.canonical.com:lun1"
+    else:
+        mock_render.assert_not_called()
+
+    assert isinstance(harness.charm.unit.status, ActiveStatus)
+
+
+@pytest.mark.parametrize(
+    "initiator_content, render_expected",
+    [
+        (None, True),  # file doesn't exist
+        ("", True),  # file exists but no content
+        (INITIATOR_CONTENT_TEMPLATE.format("InitiatorName=test-iqn"), False),
+    ],
+    ids=["no-file", "empty-file", "content-present"],
+)
+def test_iscsi_without_initiator_dictionary_hostname(
+    mocker, harness, iscsi_config, initiator_content, render_expected
+):
+    """Test iscsi config when hostname is absent from initiator-dictionary."""
+    mocker.patch("charm.utils.is_container", return_value=False)
+    mock_getoutput = mocker.patch(
+        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
+    )
+    mocker.patch("charm.socket.getfqdn", return_value="testhost.testdomain")
+    mocker.patch("charm.subprocess.check_call")
+    mocker.patch("charm.subprocess.check_output")
+    mocker.patch("charm.StorageConnectorCharm._configure_deferred_restarts")
+    mocker.patch("charm.StorageConnectorCharm._defer_service_restart")
+    mocker.patch("charm.Path.chmod")
+    mock_getoutput = mocker.patch(
+        "charm.subprocess.getoutput", return_value="iqn.2020-07.canonical.com:lun1"
+    )
+    mock_render = mocker.patch("charm.StorageConnectorCharm._render_iscsi_initiator")
+
+    if initiator_content is not None:
+        harness.charm.ISCSI_INITIATOR_NAME.write_text(initiator_content)
+
+    iscsi_config["initiator-dictionary"] = "{}"
+    harness.update_config(iscsi_config)
+
+    if render_expected:
+        # only checking the initiator_name arg and not jinja2 environment
+        assert mock_render.call_args[0][0] == "iqn.2020-07.canonical.com:lun1"
+    else:
+        mock_render.assert_not_called()
+
+    if not initiator_content:
+        # if file doesn't exist or is empty, random iqn is generated
+        assert call("/sbin/iscsi-iname") in mock_getoutput.mock_calls
+
     assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
@@ -369,6 +511,7 @@ def test_on_config_changed_fc(harness, mocker, fc_config, multipath_topology):
             multipath_topology,
         ],
     )
+    mocker.patch("charm.subprocess.check_call")
     expected_multipath_conf = (
         "###############################################################################\n"
         "# [ WARNING ]\n"

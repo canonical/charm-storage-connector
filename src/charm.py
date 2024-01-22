@@ -460,22 +460,72 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
+
         initiators = charm_config.get("initiator-dictionary")
         if initiators:
-            # search for hostname and create context
+            # search for hostname in initiator-dictionary if it exists
             initiators_dict = json.loads(initiators)
             if hostname in initiators_dict.keys():
                 initiator_name = initiators_dict[hostname]
 
-        if not initiator_name:
+        initiator_name_from_file = self._get_initiator_name_from_file(self.ISCSI_INITIATOR_NAME)
+
+        # either initiator-dictionary not provided or hostname not present there
+        # and config file doesn't contain initiator name
+        if not initiator_name and not initiator_name_from_file:
+            # generate random iqn
             initiator_name = subprocess.getoutput("/sbin/iscsi-iname")
             logging.warning(
-                "The hostname was not found in the initiator dictionary! "
-                "The random iqn %s will be used for %s",
+                "Hostname was not found in initiator-dict and /etc/initiatorname.iscsi file."
+                + "The randomly generated iqn %s will be used for %s",
                 initiator_name,
                 hostname,
             )
+            self._render_iscsi_initiator(initiator_name, tenv)
+        elif initiator_name and initiator_name != initiator_name_from_file:
+            # initiator name configuration is provided and isn't the same as
+            # what's already present in the initiatorname.iscsi file.
+            # so render file with provided name
+            self._render_iscsi_initiator(initiator_name, tenv)
+        else:
+            # do not render the file again for these cases:
+            # 1. initiator name configuration from initiator-dictionary is same as
+            #    name in initiatorname.iscsi file
+            # 2. no initiator name configuration but name is present in file. use
+            #    the same name.
+            logging.debug("/etc/initiatorname.iscsi file was not rendered")
 
+    def _get_initiator_name_from_file(self, iscsi_config_file: Path | None = None) -> str | None:
+        """Parse iSCSI config file to check if "InitiatorName" is set.
+
+        iSCSI config file is /etc/iscsi/initiatorname.iscsi by default.
+
+        Returns:
+            "InitiatorName" value in config file if present.
+            None if config file isn't present or "InitiatorName" isn't set.
+        """
+        # can't set default param value to instance attribute
+        if not iscsi_config_file:
+            iscsi_config_file = self.ISCSI_INITIATOR_NAME
+        try:
+            with open(iscsi_config_file, encoding="utf-8") as file:
+                lines = file.readlines()
+        except FileNotFoundError:
+            logging.warning("%s doesn't exist", iscsi_config_file)
+            return None
+
+        # "\s*" matches for potential whitespace around "="
+        # The capturing group "(.*)" matches for the iqn assigned to InitiatorName
+        pattern = re.compile(r"^InitiatorName\s*=\s*(.*)$")
+        for line in lines:
+            match = pattern.match(line)
+            if match:
+                initiator_name = match.group(1).strip()
+                return initiator_name
+        return None
+
+    def _render_iscsi_initiator(self, initiator_name: str, tenv: Environment) -> None:
+        """Render /etc/iscsi/initiatorname.iscsi file with provided initiator name."""
         logging.info("Rendering initiatorname.iscsi")
         ctxt = {"initiator_name": initiator_name}
         template = tenv.get_template("initiatorname.iscsi.j2")
