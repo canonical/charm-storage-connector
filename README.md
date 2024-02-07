@@ -42,12 +42,12 @@ make build
 ```
 This will create the `storage-connector.charm` file and place it in the `.build` directory.
 
-To deploy this subordinate charm on an ubuntu unit, deploy `cs:ubuntu` first , or other principal
+To deploy this subordinate charm on an ubuntu unit, deploy `ubuntu` first , or other principal
 charm of your choosing (i.e nova-compute, mysql, etc.).
 ```
 juju add-model my-test-model
-juju deploy cs:ubuntu --series focal
-juju deploy cs:storage-connector
+juju deploy ubuntu --series focal
+juju deploy storage-connector
 ```
 
 ### To configure this charm for iSCSI, do the following.
@@ -103,4 +103,4 @@ cause of the error.
 ## Contact
  - Author: Camille Rodriguez <camille.rodriguez@canonical.com>
  - Maintainers: BootStack Charmers <bootstack-charmers@lists.canonical.com>
- - Bug Tracker: [here](https://bugs.launchpad.net/charm-storage-connector)
+ - Issues: [here](https://github.com/canonical/charm-storage-connector/issues)
