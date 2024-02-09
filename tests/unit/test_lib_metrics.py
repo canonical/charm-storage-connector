@@ -1,4 +1,5 @@
 """Metrics_utils module related tests."""
+
 from ops.model import ModelError
 from storage_connector import metrics_utils
 

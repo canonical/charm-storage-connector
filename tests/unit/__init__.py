@@ -1,4 +1,5 @@
 """Init mocking for unit tests."""
+
 import sys
 from unittest import mock
 
