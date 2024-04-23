@@ -43,8 +43,6 @@ submodules-update:
 	@git submodule update --init --recursive --remote --merge
 
 clean:
-	@echo "Cleaning files"
-	@git clean -ffXd -e '!.idea' -e '!.vscode'
 	@echo "Cleaning existing build"
 	@rm -rf ${PROJECTPATH}/${CHARM_NAME}*.charm
 	@echo "Cleaning charmcraft"

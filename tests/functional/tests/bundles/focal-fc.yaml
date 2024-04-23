@@ -2,6 +2,7 @@ local_overlay_enabled: True
 series: focal
 applications:
   storage-connector:
+    charm: ch:storage-connector
     options:
       storage-type: 'fc'
       fc-lun-alias: 'data1'
