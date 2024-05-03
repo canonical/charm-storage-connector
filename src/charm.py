@@ -409,8 +409,7 @@ class StorageConnectorCharm(CharmBase):
                 or self._stored.storage_type not in self.VALID_STORAGE_TYPES
             ):
                 # allow user to change storage type only if initial entry was incorrect
-                assert isinstance(charm_config["storage-type"], str)
-                self._stored.storage_type = charm_config["storage-type"].lower()
+                self._stored.storage_type = str(charm_config["storage-type"]).lower()
                 logging.debug("Storage type updated to %s", self._stored.storage_type)
             elif charm_config["storage-type"] != self._stored.storage_type:
                 self.unit.status = BlockedStatus(
@@ -461,11 +460,9 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
-
-        initiators = charm_config.get("initiator-dictionary")
+        initiators = str(charm_config.get("initiator-dictionary"))
         if initiators:
             # search for hostname in initiator-dictionary if it exists
-            assert isinstance(initiators, str)
             initiators_dict = json.loads(initiators)
             if hostname in initiators_dict.keys():
                 initiator_name = initiators_dict[hostname]
@@ -559,12 +556,11 @@ class StorageConnectorCharm(CharmBase):
         ctxt = {}
         multipath_sections = ["defaults", "devices", "blacklist"]
         for section in multipath_sections:
-            config = charm_config.get("multipath-" + section)
+            config = str(charm_config.get("multipath-" + section))
             if config:
                 logging.info("Gather information for the multipaths section %s", section)
                 logging.debug("multipath-%s data: %s", section, config)
                 try:
-                    assert isinstance(config, str)
                     ctxt[section] = json.loads(config)
                 except json.JSONDecodeError as exception:
                     logging.info(
