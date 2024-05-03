@@ -409,6 +409,7 @@ class StorageConnectorCharm(CharmBase):
                 or self._stored.storage_type not in self.VALID_STORAGE_TYPES
             ):
                 # allow user to change storage type only if initial entry was incorrect
+                assert isinstance(charm_config["storage-type"], str)
                 self._stored.storage_type = charm_config["storage-type"].lower()
                 logging.debug("Storage type updated to %s", self._stored.storage_type)
             elif charm_config["storage-type"] != self._stored.storage_type:
@@ -464,6 +465,7 @@ class StorageConnectorCharm(CharmBase):
         initiators = charm_config.get("initiator-dictionary")
         if initiators:
             # search for hostname in initiator-dictionary if it exists
+            assert isinstance(initiators, str)
             initiators_dict = json.loads(initiators)
             if hostname in initiators_dict.keys():
                 initiator_name = initiators_dict[hostname]
@@ -562,6 +564,7 @@ class StorageConnectorCharm(CharmBase):
                 logging.info("Gather information for the multipaths section %s", section)
                 logging.debug("multipath-%s data: %s", section, config)
                 try:
+                    assert isinstance(config, str)
                     ctxt[section] = json.loads(config)
                 except json.JSONDecodeError as exception:
                     logging.info(
