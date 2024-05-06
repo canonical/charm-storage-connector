@@ -402,16 +402,17 @@ class StorageConnectorCharm(CharmBase):
     def _check_mandatory_config(self) -> None:
         """Check whether mandatory configs are provided."""
         charm_config = self.model.config
-
-        if charm_config["storage-type"] in self.VALID_STORAGE_TYPES:
+        # Ensure it's string according to config.yaml
+        store_type: str = charm_config.get("storage-type")  # type: ignore [assignment]
+        if store_type in self.VALID_STORAGE_TYPES:
             if (
                 self._stored.storage_type == "None"
                 or self._stored.storage_type not in self.VALID_STORAGE_TYPES
             ):
                 # allow user to change storage type only if initial entry was incorrect
-                self._stored.storage_type = str(charm_config["storage-type"]).lower()
+                self._stored.storage_type = store_type.lower()
                 logging.debug("Storage type updated to %s", self._stored.storage_type)
-            elif charm_config["storage-type"] != self._stored.storage_type:
+            elif store_type != self._stored.storage_type:
                 self.unit.status = BlockedStatus(
                     "Storage type cannot be changed after deployment."
                 )
@@ -460,7 +461,8 @@ class StorageConnectorCharm(CharmBase):
         charm_config = self.model.config
         initiator_name = None
         hostname = socket.getfqdn()
-        initiators = str(charm_config.get("initiator-dictionary"))
+        # Ensure it's string according to config.yaml
+        initiators: str = charm_config.get("initiator-dictionary")  # type: ignore [assignment]
         if initiators:
             # search for hostname in initiator-dictionary if it exists
             initiators_dict = json.loads(initiators)
@@ -556,7 +558,8 @@ class StorageConnectorCharm(CharmBase):
         ctxt = {}
         multipath_sections = ["defaults", "devices", "blacklist"]
         for section in multipath_sections:
-            config = str(charm_config.get("multipath-" + section))
+            # Ensure it's string according to config.yaml
+            config: str = charm_config.get("multipath-" + section)  # type: ignore [assignment]
             if config:
                 logging.info("Gather information for the multipaths section %s", section)
                 logging.debug("multipath-%s data: %s", section, config)
