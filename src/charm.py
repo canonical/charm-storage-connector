@@ -36,7 +36,7 @@ from ops.charm import (
 )
 from ops.framework import StoredState
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, StatusBase
 from storage_connector import metrics_utils, nrpe_utils
 
 import utils  # noqa
@@ -158,7 +158,8 @@ class StorageConnectorCharm(CharmBase):
 
     def _on_install(self, _: InstallEvent) -> None:
         """Handle install state."""
-        self.unit.status = MaintenanceStatus("Installing charm software")
+        # type casting is to keep mypy happy; see https://github.com/canonical/operator/issues/1401
+        self.unit.status = cast(StatusBase, MaintenanceStatus("Installing charm software"))
         if self._check_if_container():
             return
 
@@ -199,7 +200,8 @@ class StorageConnectorCharm(CharmBase):
         if self._check_if_container():
             return
 
-        self.unit.status = MaintenanceStatus("Validating charm configuration")
+        # type casting is to keep mypy happy; see https://github.com/canonical/operator/issues/1401
+        self.unit.status = cast(StatusBase, MaintenanceStatus("Validating charm configuration"))
         self._check_mandatory_config()
         if isinstance(self.unit.status, BlockedStatus):
             return
@@ -209,7 +211,8 @@ class StorageConnectorCharm(CharmBase):
             if isinstance(self.unit.status, BlockedStatus):
                 return
 
-        self.unit.status = MaintenanceStatus("Rendering charm configuration")
+        # type casting is to keep mypy happy; see https://github.com/canonical/operator/issues/1401
+        self.unit.status = cast(StatusBase, MaintenanceStatus("Rendering charm configuration"))
         self._create_directories()
 
         tenv = Environment(loader=FileSystemLoader("templates"))
