@@ -13,8 +13,6 @@ help:
 	@echo "This project supports the following targets"
 	@echo ""
 	@echo " make help - show this text"
-	@echo " make dev-environment - setup the development environment"
-	@echo " make pre-commit - run pre-commit checks on all the files"
 	@echo " make submodules - initialize, fetch, and checkout any nested submodules"
 	@echo " make submodules-update - update submodules to latest changes on remote branch"
 	@echo " make clean - remove unneeded files and clean charmcraft environment"
@@ -26,13 +24,6 @@ help:
 	@echo " make functional - run the tests defined in the functional subdirectory"
 	@echo " make test - run lint, unittests and functional targets"
 	@echo ""
-
-dev-environment:
-	@echo "Creating virtualenv with pre-commit installed"
-	@tox -r -e dev-environment
-
-pre-commit:
-	@tox -e pre-commit
 
 submodules:
 	@echo "Cloning submodules"
@@ -78,4 +69,4 @@ test: lint unittests functional
 	@echo "Tests completed for charm ${CHARM_NAME}."
 
 # The targets below don't depend on a file
-.PHONY: help dev-environment pre-commit submodules submodules-update clean build lint reformat unittests functional
+.PHONY: help submodules submodules-update clean build lint reformat unittests functional
