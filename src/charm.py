@@ -291,7 +291,7 @@ class StorageConnectorCharm(CharmBase):
             if not specified_services:
                 event.set_results({"failed": "No valid services are specified."})
                 return
-            event.log(f"Restarting the following services: {", ".join(specified_services)}")
+            event.log(f"Restarting the following services: {', '.join(specified_services)}")
             self._restart_services(services=specified_services)
 
         event.set_results({"success": "True"})
