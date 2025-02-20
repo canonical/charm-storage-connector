@@ -301,7 +301,7 @@ class StorageConnectorCharm(CharmBase):
         output = []
         for deferred_event in deferred_events.get_deferred_restarts():
             output.append(
-                f"{str(datetime.utcfromtimestamp(deferred_event.timestamp))} {"+0000 UTC"} "
+                f"{str(datetime.utcfromtimestamp(deferred_event.timestamp))} +0000 UTC "
                 f"{deferred_event.service.ljust(40)} {deferred_event.reason}"
             )
         output.sort()
