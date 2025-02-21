@@ -33,7 +33,7 @@ def get_metrics(name: str) -> List[str]:
 
     metrics = [line.split() for line in response.splitlines() if line.startswith(name)]
     if not metrics:
-        raise RuntimeError("Metric: {} not found".format(name))
+        raise RuntimeError(f"Metric: {name} not found")
 
     return metrics
 
@@ -76,9 +76,7 @@ def main() -> None:
         output = get_total_paths_per_alias(get_metrics("iscsi_multipath_path_total"))
         for alias, num_paths in output.items():
             if num_paths != args.expected_num:
-                message = "Expected {} paths for {} but found {}.".format(
-                    args.expected_num, alias, num_paths
-                )
+                message = f"Expected {args.expected_num} paths for {alias} but found {num_paths}."
                 print(f"{NAGIOS_STATUS[NAGIOS_STATUS_CRITICAL]}: {message}")
                 sys.exit(NAGIOS_STATUS_CRITICAL)
 

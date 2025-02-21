@@ -281,9 +281,7 @@ class StorageConnectorCharm(CharmBase):
                 event.set_results({"failed": "No deferred services to restart"})
                 return
             event.log(
-                "Restarting the following deferred services: {}".format(
-                    ", ".join(deferred_services)
-                )
+                f"Restarting the following deferred services: {', '.join(deferred_services)}"
             )
             self._restart_services(services=deferred_services)
         else:
@@ -293,9 +291,7 @@ class StorageConnectorCharm(CharmBase):
             if not specified_services:
                 event.set_results({"failed": "No valid services are specified."})
                 return
-            event.log(
-                "Restarting the following services: {}".format(", ".join(specified_services))
-            )
+            event.log(f"Restarting the following services: {', '.join(specified_services)}")
             self._restart_services(services=specified_services)
 
         event.set_results({"success": "True"})
@@ -305,17 +301,11 @@ class StorageConnectorCharm(CharmBase):
         output = []
         for deferred_event in deferred_events.get_deferred_restarts():
             output.append(
-                "{} {} {} {}".format(
-                    str(datetime.utcfromtimestamp(deferred_event.timestamp)),
-                    "+0000 UTC",
-                    deferred_event.service.ljust(40),
-                    deferred_event.reason,
-                )
+                f"{str(datetime.utcfromtimestamp(deferred_event.timestamp))} +0000 UTC "
+                f"{deferred_event.service.ljust(40)} {deferred_event.reason}"
             )
         output.sort()
-        event.set_results(
-            {"deferred-restarts": "{}".format(yaml.dump(output, default_flow_style=False))}
-        )
+        event.set_results({"deferred-restarts": yaml.dump(output, default_flow_style=False)})
 
     def _on_reload_multipathd_service_action(self, event: ActionEvent) -> None:
         """Reload multipathd service."""
@@ -345,10 +335,8 @@ class StorageConnectorCharm(CharmBase):
                 }
             )
             if deferred_restarts:
-                svc_msg = "Services queued for restart: {}".format(
-                    ", ".join(sorted(deferred_restarts))
-                )
-                status_message = "{}. {}".format(status_message, svc_msg)
+                svc_msg = f"Services queued for restart: {', '.join(sorted(deferred_restarts))}"
+                status_message = f"{status_message}. {svc_msg}"
 
         return status_message
 
@@ -359,7 +347,7 @@ class StorageConnectorCharm(CharmBase):
                 deferred_events.ServiceEvent(
                     timestamp=round(time.time()),
                     service=service,
-                    reason="Charm event: {}".format(reason),
+                    reason=f"Charm event: {reason}",
                     action="restart",
                 )
             )
@@ -433,7 +421,7 @@ class StorageConnectorCharm(CharmBase):
                 missing_config.append(config)
         if missing_config:
             self.unit.status = BlockedStatus(
-                "Missing mandatory configuration " + "option(s) {}".format(missing_config)
+                f"Missing mandatory configuration option(s) {missing_config}"
             )
 
     def _defer_once(self, event: HookEvent) -> None:
@@ -654,7 +642,7 @@ class StorageConnectorCharm(CharmBase):
         error = re.findall(r"(invalid\skeyword:\s\w+)", result)
         if error:
             logging.info("Configuration is probably malformed. See output below %s", result)
-            self.unit.status = BlockedStatus("Multipath conf error: {}".format(error))
+            self.unit.status = BlockedStatus(f"Multipath conf error: {error}")
 
     def _check_if_container(self) -> bool:
         """Check if the charm is being deployed on a container host."""
@@ -667,7 +655,7 @@ class StorageConnectorCharm(CharmBase):
     def _configure_deferred_restarts(self) -> None:
         """Set up deferred restarts in policy-rc.d."""
         policy_rcd.install_policy_rcd()
-        os.chmod("/var/lib/charm/{}/policy-rc.d".format(self.app.name), 0o755)
+        os.chmod(f"/var/lib/charm/{self.app.name}/policy-rc.d", 0o755)
 
         charm_config = self.model.config
         if charm_config.get("enable-auto-restarts"):
