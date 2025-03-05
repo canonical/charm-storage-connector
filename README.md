@@ -1,4 +1,6 @@
 # Storage Connector Charm
+> [!NOTE]
+> This charm is under maintenance mode. Only critical bug will be handled.
 
 ## Overview
 
