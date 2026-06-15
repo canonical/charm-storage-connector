@@ -10,14 +10,16 @@ from charm import StorageConnectorCharm
 @pytest.fixture
 def multipath_topology():
     """Return an example output of the "multipath -ll" command."""
-    return dedent(r"""diskname (360014380056efd060000d00000510000) dm-3 Vendor,StorageModel
+    return dedent(
+        r"""diskname (360014380056efd060000d00000510000) dm-3 Vendor,StorageModel
             [size=1.0G][features=1 queue_if_no_path][hwhandler=0][rw]
             \_ round-robin 0 [prio=100][active]
             \_ 0:0:0:1 sda 8:0   [active][ready]
             \_ 1:0:1:1 sdd 8:48  [active][ready]
             \_ round-robin 0 [prio=20][enabled]
             \_ 0:0:1:1 sdb 8:16  [active][ready]
-            \_ 1:0:0:1 sdc 8:32  [active][ready]""")
+            \_ 1:0:0:1 sdc 8:32  [active][ready]"""
+    )
 
 
 @pytest.fixture

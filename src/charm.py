@@ -563,8 +563,10 @@ class StorageConnectorCharm(CharmBase):
                         section,
                         exception,
                     )
-                    self.unit.status = BlockedStatus("Exception occured during the multipath \
-                        configuration. Please check logs.")
+                    self.unit.status = BlockedStatus(
+                        "Exception occured during the multipath \
+                        configuration. Please check logs."
+                    )
                     return
             else:
                 logging.debug("multipath-%s is empty.", section)  # pragma: nocover
