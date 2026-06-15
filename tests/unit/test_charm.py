@@ -13,8 +13,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 
 import charm
 
-INITIATOR_CONTENT_TEMPLATE = dedent(
-    """\
+INITIATOR_CONTENT_TEMPLATE = dedent("""\
     ###############################################################################
     # [ WARNING ]
     # configuration file maintained by Juju
@@ -27,8 +26,7 @@ INITIATOR_CONTENT_TEMPLATE = dedent(
     # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
     ###############################################################################
     {}
-    """
-)
+    """)
 
 
 def test_on_install_aborts_if_host_is_container(harness, mocker):
@@ -149,8 +147,7 @@ def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
     )
     mock_write_text = mocker.patch("charm.Path.write_text")
     mock_chmod = mocker.patch("charm.Path.chmod")
-    expected_iscsi_conf_content = dedent(
-        """\
+    expected_iscsi_conf_content = dedent("""\
         ###############################################################################
         # [ WARNING ]
         # configuration file maintained by Juju
@@ -181,10 +178,8 @@ def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
         node.session.nr_sessions = 1
         node.session.iscsi.FastAbort = Yes
         node.session.scan = auto
-        """
-    )
-    expected_initiator_content = dedent(
-        """\
+        """)
+    expected_initiator_content = dedent("""\
         ###############################################################################
         # [ WARNING ]
         # configuration file maintained by Juju
@@ -196,8 +191,7 @@ def test_on_config_changed_iscsi(harness, mocker, iscsi_config):
         # may reject this initiator.  The InitiatorName must be unique
         # for each iSCSI initiator.  Do NOT duplicate iSCSI InitiatorNames.
         ###############################################################################
-        InitiatorName=iqn.2020-07.canonical.com:lun1"""
-    )
+        InitiatorName=iqn.2020-07.canonical.com:lun1""")
     expected_multipath_content = (
         "###############################################################################\n"
         "# [ WARNING ]\n"
