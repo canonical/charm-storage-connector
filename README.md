@@ -1,7 +1,3 @@
-# Storage Connector Charm
-> [!CAUTION]
-> This charm is deprecated and no longer maintained.
-
 ## Overview
 
 This charm configures a unit to connect to a storage endpoint, either iSCSI or Fibre Channel.
