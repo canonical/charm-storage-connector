@@ -2,7 +2,6 @@
 
 """Iscsi Connector Charm."""
 
-
 import json
 import logging
 import os
